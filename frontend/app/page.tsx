@@ -1,3 +1,8 @@
+import DataInput from './components/DataInput';
+import OverallSentiment from './components/OverallSentiment';
+import DetailedSentimentBreakdown from './components/DetailedSentimentBreakdown';
+import DownloadButtons from './components/DownloadButtons';
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -16,8 +21,20 @@ export default function Home() {
       </header>
 
       {/* Main Content Area */}
-      <main className="container mx-auto px-4 py-16">
-        {/* Main content will go here */}
+      <main className="container mx-auto px-4 py-16 max-w-7xl space-y-8">
+        <DataInput />
+        
+        {/* Sentiment Results Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column: Overall Sentiment + Download Buttons */}
+          <div className="flex flex-col gap-8">
+            <OverallSentiment />
+            <DownloadButtons />
+          </div>
+          
+          {/* Right Column: Detailed Sentiment Breakdown */}
+          <DetailedSentimentBreakdown />
+        </div>
       </main>
     </div>
   );
