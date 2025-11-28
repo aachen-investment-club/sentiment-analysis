@@ -1,17 +1,15 @@
 from preprocessing import preprocess_text
+from transformers import BertTokenizer, BertForSequenceClassification, pipeline
 
-from transformers import BertTokenizer, BertForSequenceClassification
-from transformers import pipeline
+_MODEL_NAME = "yiyanghkust/finbert-tone"
+_FINBERT = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
+_TOKENIZER = BertTokenizer.from_pretrained(_MODEL_NAME)
+_PIPELINE = pipeline("sentiment-analysis", model=_FINBERT, tokenizer=_TOKENIZER)
 
 
-def sentiment_analysis(text:str) -> list[dict]:
-    
-    finbert = BertForSequenceClassification.from_pretrained('yiyanghkust/finbert-tone', num_labels=3)
-    tokenizer = BertTokenizer.from_pretrained('yiyanghkust/finbert-tone')
-
-    nlp = pipeline("sentiment-analysis", model=finbert, tokenizer=tokenizer)
+def sentiment_analysis(text: str) -> list[dict]:
     preprocessed_text = preprocess_text(text)
-    results = nlp(preprocessed_text)
+    results = _PIPELINE(preprocessed_text)
     return results
 
 print(sentiment_analysis("There is a shortage of capital, and we need extra financing. The future growth is strong and we have plenty of liquidity"))
