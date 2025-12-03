@@ -1,7 +1,4 @@
-
 import streamlit as st
-
-
 import sys
 import os
 
@@ -10,7 +7,16 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+import uuid
+from datetime import date as dte
 from backend.ml.sentiment_analysis import sentiment_analysis
+from backend.aws_querying.DocumentData import add_to_table, scan_table
 
 
 import pandas as pd
@@ -21,35 +27,25 @@ import pandas as pd
 #: from the root folder
 
 
-
-
-
-
-
-
-st.write("hellow world")
-
-
-
-df = pd.DataFrame({
-  'first column': [1, 2, 3, 4],
-  'second column': [10, 20, 30, 40]
-})
 inp = st.text_input("input something")
+if inp: 
+
+  st.write(inp)
+
+  #"There is a shortage of capital, and we need extra financing. The future growth is strong and we have plenty of liquidity":
+
+  st.write(sentiment_analysis(inp))
 
 
 
-st.write(inp)
+if st.toggle("scan table"): 
+  st.write(scan_table())
 
 
 
-#"There is a shortage of capital, and we need extra financing. The future growth is strong and we have plenty of liquidity":
+if st.toggle("add a row to the table"): 
 
-st.write(sentiment_analysis(inp))
-
-
-
-
-
-st.write(df)
-
+  date = str(dte.today())
+  assets = st.multiselect(label ="select assets", options = ["NVDA", "INTEL", "AMD"])
+  if st.toggle("commit row"): 
+    st.write(add_to_table(date, assets))
