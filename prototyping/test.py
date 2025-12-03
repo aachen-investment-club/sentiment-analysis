@@ -43,6 +43,9 @@ if st.toggle("scan table"):
 
 
 
+
+
+
 if st.toggle("add a row to the table"): 
 
   date = str(dte.today())
