@@ -3,7 +3,7 @@
 # To run streamlit
 from the root folder use: 
 ```sh
-streamlit run prototyping/test.py
+streamlit run prototyping/main_screen.py
 ```
 
 

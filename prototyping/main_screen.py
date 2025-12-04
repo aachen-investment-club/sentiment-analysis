@@ -2,10 +2,14 @@
 import streamlit as st
 import sys
 import os
+from dotenv import load_dotenv
 
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
+
+load_dotenv()
+
 from prototyping.modes import progresssion_mode, compare_mode
 
 
