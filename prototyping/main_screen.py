@@ -14,6 +14,12 @@ from prototyping.modes import progresssion_mode, compare_mode
 
 
 
+
+if "upload_count" not in st.session_state:
+    st.session_state.upload_count = 1
+
+
+
 PROGRESSION_MODE = "Sentiment over time mode"
 
 
