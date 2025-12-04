@@ -2,7 +2,11 @@
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
+# PDF Processing
+PyMuPDF>=1.23.0  # Fast text extraction
+pdfplumber>=0.10.0  # Best for tables
+camelot-py[cv]>=0.11.0  # Advanced table extraction (optional)
+ghostscript>=0.7  # Required for camelot (optional)
 
-# CORS support (included in FastAPI but explicit)
-# Already handled by fastapi.middleware.cors
-
+# Text Processing
+nltk>=3.8.0
