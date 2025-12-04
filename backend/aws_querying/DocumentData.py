@@ -49,9 +49,6 @@ def add_article_text(
 
 
 
-
-
-
 def add_article_pdf(
     date: dte, 
     assets: List[str], 
