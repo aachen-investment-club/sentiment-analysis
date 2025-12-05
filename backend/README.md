@@ -26,12 +26,20 @@ Once the server is running, you can access:
 
 ```
 backend/
-├── main.py              # FastAPI application entry point
-├── ml/                  # Machine learning services
-│   ├── preprocessing.py
-│   ├── sentiment_analysis.py
-│   └── finbert_sentiment.py
-├── requirements.txt     # Backend dependencies
-└── README.md           # This file
+├── main.py                    # FastAPI application entry point
+├── ml/                        # Machine learning services
+│   ├── preprocessing.py      # PDF text extraction and cleaning
+│   ├── sentiment_analysis.py  # Main sentiment analysis pipeline
+│   ├── finbert_sentiment.py  # FinBERT models (English & German)
+│   └── finbert_regression.py # FinBERT regression models
+├── aws_querying/              # AWS integration
+│   └── DocumentData.py       # DynamoDB document data handling
+├── requirements.txt          # Backend dependencies
+└── README.md                 # This file
 ```
+
+
+
+
+
 
