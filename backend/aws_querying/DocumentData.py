@@ -17,7 +17,8 @@ def add_article_text(
     date: dte, 
     assets: List[str], 
     source: str,
-    text 
+    text , 
+    title
 ): 
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(TABLE_NAME)
@@ -32,7 +33,8 @@ def add_article_text(
             "date": str(date),
             "assets": assets,
             "source": source, 
-            "file_name": id+".txt"
+            "file_name": id+".txt", 
+            "title": title
         }
     )
 
@@ -53,7 +55,8 @@ def add_article_pdf(
     date: dte, 
     assets: List[str], 
     source: str,
-    file
+    file, 
+    title
 ): 
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(TABLE_NAME)
@@ -68,7 +71,8 @@ def add_article_pdf(
             "date": str(date),
             "assets": assets,
             "source": source, 
-            "file_name": id+".pdf"
+            "file_name": id+".pdf", 
+            "title": title
         }
     )
 
@@ -82,7 +86,7 @@ def add_article_pdf(
 
     return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
 
-def scan_table(): 
+def list_articles(): 
     dynamodb = boto3.resource ("dynamodb")
     table = dynamodb.Table(TABLE_NAME)
     response = table.scan()
