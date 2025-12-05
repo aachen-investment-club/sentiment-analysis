@@ -1,6 +1,6 @@
 import streamlit as st
 from io import StringIO
-from backend.aws_querying.DocumentData import add_article_pdf, add_article_text
+from backend.aws_querying.DocumentData import add_article_pdf, add_article_text, list_articles
 
 
 
@@ -27,8 +27,8 @@ def progresssion_mode():
     if st.toggle("select documents"): 
 
         st.write("select documents to use")
+        article_selection()
 
-    st.divider()
 
     st.divider()
     if st.toggle("start analysis"): 
@@ -40,55 +40,126 @@ def progresssion_mode():
 
         st.write("download PDF")
 
+def file_upload(index: int):
 
-def file_upload(index: int): 
 
+    format = "text"
+    with st.container(border=True, key=f"container_textinput_{index}"):
 
-    file_date = str(st.date_input("select the articles reference date", 
-        key = f"date_input_{index}"
-    ))
-    assets = st.multiselect(
-        "select the assets related to the file", options = ["NVDA", "NASDAQ"], 
-        key = f"assets_{index}"
-    )
-    source = st.text_input(
-        "enter the source of the file",
-        key = f"source_{index}"
-    )#: it might be better to make this a choice
-    format = st.selectbox(
-        "select format", options = ["text", "pdf"], 
-        key = f"format_{index}"
-        
+        st.subheader("Article Metadata")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            file_date = str(
+                st.date_input(
+                    "Reference Date",
+                    key=f"date_input_{index}"
+                )
+            )
+
+            source = st.selectbox(
+                "Source",
+                options=["Reuters", "Bloomberg", "WSJ", "Internal"], #:  TODO: add more sources; maybe a big list
+                key=f"source_{index}",
+            )
+
+        with col2:
+            assets = st.multiselect(
+                "Related Assets",
+                options=["NVDA", "AAPL", "NASDAQ", "SPX", "BTC"], #:  TODO: add more assets; maybe a big list
+                key=f"assets_{index}",
+            )
+
+            format = st.selectbox(
+                "Article Format",
+                options=["text", "pdf"],
+                key=f"format_{index}",
+            )
+
+        title = st.text_input(
+            "Article Title",
+            key=f"title_{index}"
         )
-    if format == "text": 
-        text = st.text_input("enter article text", 
-        key = f"textinput_{index}"
-                             )
-    else: 
 
-        file = st. file_uploader(
-            "Choose a file", 
-            key = f"uploader_{index}"
-        )
-        if file is not None:
-            st.write("done loading file")
+        st.divider()
 
-    if st.toggle(
-            "save file",
-            key = f"togglesave_{index}"
-        ): 
-        if format =="text": 
+        st.subheader("Article Content")
 
-            add_article_text(file_date, assets, source, text)
-        else: 
-            add_article_pdf(file_date, assets, source, file)
-        st.write(
-            "file safely stored and loaded!",
-            key = f"message_saved_{index}"
-        )
-    return True
+        text = None
+        file = None
+
+        if format == "text":
+            text = st.text_area(
+                "Enter article text",
+                height=180,
+                key=f"textinput_{index}"
+            )
+        else:
+            file = st.file_uploader(
+                "Upload PDF file",
+                type=["pdf"],
+                key=f"uploader_{index}"
+            )
+            if file is not None:
+                st.success("File uploaded successfully.")
+
+        st.divider()
+
+        submitted = st.button("Save Article", 
+                              key = f"button_upload{index}")
+
+        if submitted:
+
+            if format == "text":
+                if not text:
+                    st.error("Please enter article text before saving.")
+                    return False
+
+                add_article_text(file_date, assets, source, text, title)
+
+            else:
+                if file is None:
+                    st.error("Please upload a PDF file before saving.")
+                    return False
+
+                add_article_pdf(file_date, assets, source, file, title)
+
+            st.success("Article successfully saved!")
+            return True
+
+    return False
 
 
+
+
+def article_selection(): 
+
+    articles = list_articles()
+    selection = []
+    for article in articles: 
+        with st.container(border = True): 
+            col1, col2 = st.columns([0.9,0.1])
+            checked = col2.checkbox ("", key = article["DocumentID"])
+        with col1: 
+            st.markdown(f"{article['title']}")
+            st.markdown(f"Date: {article['date']}")
+            st.markdown(f"Source: {article['source']}")
+
+            asset_tags = " ".join(
+                [f"<span style='background-color:#e0e7ff;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
+                 for a in article["assets"]]
+            )
+            st.markdown(f"**Article topics:** {asset_tags}", unsafe_allow_html=True)
+        if checked: 
+            selection.append(article["DocumentID"])
+
+    if st.toggle("Commit selection"): 
+        st.write(f"selected articles: {selection}")
+
+
+
+    # TODO: the part where the documents are fetched for analysis should be executed when 
+    # the analysis is started 
 
 
 
