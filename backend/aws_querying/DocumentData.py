@@ -2,6 +2,9 @@ from datetime import date as dte
 from typing import List
 import uuid
 import boto3
+from io import StringIO
+import pandas as pd
+
 from boto3.dynamodb.conditions import Key, Attr
 #import streamlit as st
 
@@ -16,6 +19,8 @@ PK = "DocumentID"
 def add_article_text(
     date: dte, 
     assets: List[str], 
+    commodities: List[str], 
+    markets: List[str], 
     source: str,
     text , 
     title
@@ -32,6 +37,8 @@ def add_article_text(
             PK: id,
             "date": str(date),
             "assets": assets,
+            "commodities": commodities,
+            "markets": markets,
             "source": source, 
             "file_name": id+".txt", 
             "title": title
@@ -48,12 +55,39 @@ def add_article_text(
     return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
+def get_document_labels(): 
+    s3 = boto3.client("s3")
+    files = [
+    "markets.csv",
+    "commodities.csv",
+    "assets.csv"
+    ]
+    
+    categories= [
+    "markets",
+    "commodities",
+    "assets"
+    ]
+
+    results = {}
+
+    for key,category in zip(files, categories):
+        obj = s3.get_object(Bucket=ARTICLES_BUCKET, Key=key)
+        body= obj["Body"].read().decode("utf-8")
+        df = pd.read_csv(StringIO(body))
+
+
+        results[category] = df.iloc[:, -1].dropna().tolist()
+
+    return results 
 
 
 
 def add_article_pdf(
     date: dte, 
     assets: List[str], 
+    commodities: List[str], 
+    markets: List[str], 
     source: str,
     file, 
     title
@@ -70,6 +104,8 @@ def add_article_pdf(
             PK: id,
             "date": str(date),
             "assets": assets,
+            "commodities": commodities,
+            "markets": markets,
             "source": source, 
             "file_name": id+".pdf", 
             "title": title

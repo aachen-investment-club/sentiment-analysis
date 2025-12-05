@@ -59,15 +59,27 @@ def file_upload(index: int):
 
             source = st.selectbox(
                 "Source",
-                options=["Reuters", "Bloomberg", "WSJ", "Internal"], #:  TODO: add more sources; maybe a big list
+                options=["Reuters", "Bloomberg", "WSJ", "Internal"], 
+                #:  TODO: add more sources; maybe a big list; can be 
+                # discussed with the news team
                 key=f"source_{index}",
             )
 
         with col2:
             assets = st.multiselect(
                 "Related Assets",
-                options=["NVDA", "AAPL", "NASDAQ", "SPX", "BTC"], #:  TODO: add more assets; maybe a big list
+                options=[None]+ st.session_state.article_labels["assets"], 
                 key=f"assets_{index}",
+            )
+            commodities = st.multiselect(
+                "Related Commodities",
+                options=[None]+ st.session_state.article_labels["commodities"], 
+                key=f"commodities_{index}",
+            )
+            markets= st.multiselect(
+                "Related Markets",
+                options=[None]+ st.session_state.article_labels["markets"], 
+                key=f"markets_{index}",
             )
 
             format = st.selectbox(
@@ -115,14 +127,14 @@ def file_upload(index: int):
                     st.error("Please enter article text before saving.")
                     return False
 
-                add_article_text(file_date, assets, source, text, title)
+                add_article_text(file_date, assets, commodities, markets, source, text, title)
 
             else:
                 if file is None:
                     st.error("Please upload a PDF file before saving.")
                     return False
 
-                add_article_pdf(file_date, assets, source, file, title)
+                add_article_pdf(file_date, assets, commodities, markets,  source, file, title)
 
             st.success("Article successfully saved!")
             return True
@@ -146,10 +158,27 @@ def article_selection():
             st.markdown(f"Source: {article['source']}")
 
             asset_tags = " ".join(
-                [f"<span style='background-color:#e0e7ff;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
+                [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
                  for a in article["assets"]]
             )
-            st.markdown(f"**Article topics:** {asset_tags}", unsafe_allow_html=True)
+            st.markdown(f"**Article assets:** {asset_tags}", unsafe_allow_html=True)
+
+
+            commodities_tags = " ".join(
+                [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
+                 for a in article["commodities"]]
+            )
+            st.markdown(f"**Article commodities:** {commodities_tags}", unsafe_allow_html=True)
+
+
+            markets_tags= " ".join(
+                [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
+                 for a in article["markets"]]
+            )
+            st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
+
+
+
         if checked: 
             selection.append(article["DocumentID"])
 
