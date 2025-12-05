@@ -1,2 +1,7 @@
 /venv
+/data
 __pycache__/
+.env
+
+/prototyping/mock.py
+/prototyping/wikipedia_extractor.py

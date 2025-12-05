@@ -1,14 +1,30 @@
-from preprocessing import preprocess_text
+from backend.ml.preprocessing import preprocess_text
 from transformers import BertTokenizer, BertForSequenceClassification, pipeline
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import defaultdict
 
 _MODEL_NAME = "yiyanghkust/finbert-tone"
-_FINBERT = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
-_TOKENIZER = BertTokenizer.from_pretrained(_MODEL_NAME)
-_PIPELINE = pipeline("sentiment-analysis", model=_FINBERT, tokenizer=_TOKENIZER)
+_FINBERT_C = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
+_TOKENIZER_C = BertTokenizer.from_pretrained(_MODEL_NAME)
+
+_TOKENIZER_R = AutoTokenizer.from_pretrained("LHF/finbert-regressor")
+_FINBERT_R= AutoModelForSequenceClassification.from_pretrained("LHF/finbert-regressor")
 
 
-def sentiment_analysis(text: str) -> tuple[str, float, list[dict]]:
+
+_PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZER_R)
+
+
+
+def sentiment_analysis(text: str, regression: bool = False) -> tuple[str, float, list[dict]]:
+    if regression: 
+        _PIPELINE.model = _FINBERT_R
+        _PIPELINE.tokenizer = _TOKENIZER_R
+    else: 
+        _PIPELINE.model = _FINBERT_C
+        _PIPELINE.tokenizer = _TOKENIZER_C
+
+
     preprocessed_text = preprocess_text(text)
     results = _PIPELINE(preprocessed_text)
     overall_sentiment, confidence = aggregate_sentiment(results)
@@ -39,5 +55,3 @@ def aggregate_sentiment(sentence_sentiment: list[dict]) -> dict:
     confidence = round(max_score * 100, 1)
 
     return max_label, confidence
-
-print(sentiment_analysis("There is a shortage of capital, and we need extra financing. The future growth is strong and we have plenty of liquidity"))
