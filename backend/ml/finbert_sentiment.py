@@ -51,12 +51,12 @@ if __name__ == "__main__":
     
     # Test German sentences
     german_sentences = [
-        "Es gibt einen Mangel an Kapital und wir benötigen zusätzliche Finanzierung.",
-        "Das Wachstum ist stark und wir haben reichlich Liquidität.",
-        "Es gibt Zweifel an unseren Finanzen.",
-        "Die Gewinne sind konstant."
-    ]
-    
+    "Es gibt einen Mangel an Kapital und wir benötigen zusätzliche Finanzierung.",
+    "Das Wachstum ist stark und wir haben reichlich Liquidität.",
+    "Es gibt Zweifel an unseren Finanzen.",
+    "Die Gewinne sind konstant."
+]
+
     print("\n=== German Sentiment Analysis ===")
     german_results = analyze_sentiment(german_sentences, language="de")
     print(german_results)
