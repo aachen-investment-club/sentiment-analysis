@@ -10,11 +10,7 @@ _TOKENIZER_C = BertTokenizer.from_pretrained(_MODEL_NAME)
 _TOKENIZER_R = AutoTokenizer.from_pretrained("LHF/finbert-regressor")
 _FINBERT_R= AutoModelForSequenceClassification.from_pretrained("LHF/finbert-regressor")
 
-
-
 _PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZER_R)
-
-
 
 def sentiment_analysis(text: str, regression: bool = False) -> tuple[str, float, list[dict]]:
     if regression: 
@@ -23,7 +19,6 @@ def sentiment_analysis(text: str, regression: bool = False) -> tuple[str, float,
     else: 
         _PIPELINE.model = _FINBERT_C
         _PIPELINE.tokenizer = _TOKENIZER_C
-
 
     preprocessed_text = preprocess_text(text)
     results = _PIPELINE(preprocessed_text)
