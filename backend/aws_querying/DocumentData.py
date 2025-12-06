@@ -92,7 +92,7 @@ def add_article_pdf(
     file, 
     title
 ): 
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="eu-central-1")
     table = dynamodb.Table(TABLE_NAME)
 
     s3 = boto3.client("s3")
@@ -123,7 +123,7 @@ def add_article_pdf(
     return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 def list_articles(): 
-    dynamodb = boto3.resource ("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="eu-central-1")
     table = dynamodb.Table(TABLE_NAME)
     response = table.scan()
 
