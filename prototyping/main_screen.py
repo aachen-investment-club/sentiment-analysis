@@ -12,6 +12,7 @@ load_dotenv()
 
 from prototyping.modes import progresssion_mode, compare_mode
 from backend.aws_querying.DocumentData import get_document_labels
+from backend.aws_querying.DocumentData import local_get_document_labels
 
 
 
@@ -20,7 +21,7 @@ if "upload_count" not in st.session_state:
     st.session_state.upload_count = 1
 
 if "article_labels" not in st.session_state: 
-    st.session_state.article_labels = get_document_labels()
+    st.session_state.article_labels = local_get_document_labels()
 
 
 
