@@ -48,8 +48,8 @@ def preprocess_pdf(pdf_path: str) -> str:
     
     # Combine all pages
     full_text = "\n\n".join(text_parts)
-    cleaned_text = clean_pdf_text(full_text)
-    return cleaned_text
+    cleaned_text = llm_fine_clean(clean_pdf_text(full_text))
+    return preprocess_text(cleaned_text)
 
 def llm_fine_clean(first_pass: str) -> str:
     """
