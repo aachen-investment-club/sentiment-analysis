@@ -1,11 +1,11 @@
 # Streamlit Framework
-streamlit>=1.28.0
+streamlit 
 
 # Environment Variables
-python-dotenv>=1.0.0
+python-dotenv
 
 # AWS SDK (for DynamoDB operations)
-boto3>=1.28.0
+boto3
 
 # Data Utilities
-pandas>=2.0.0
+pandas

@@ -205,6 +205,11 @@ def compare_mode():
         st.write("Document 1:")
 
     st.divider()
+    
+    if st.toggle("start selecting documents"): 
+        pass
+
+    st.divider()
     if st.toggle("start analysis"): 
 
         st.write("analysis started")
