@@ -25,7 +25,7 @@ def add_article_text(
     text , 
     title
 ): 
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="eu-central-1")
     table = dynamodb.Table(TABLE_NAME)
 
     s3 = boto3.client("s3")
