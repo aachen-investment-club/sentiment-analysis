@@ -119,7 +119,6 @@ def add_article_pdf(
         Body=file.read()
     )
 
-
     return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 def list_articles(): 
@@ -133,6 +132,21 @@ def list_articles():
 
     return False
 
+def get_articles_s3(articles: List[str]): 
+    client= boto3.client("s3")
+
+
+    response = client.list_objects_v2(Bucket = ARTICLES_BUCKET)
+    files = {}
+    for article_name in articles: 
+        response = client.get_object(
+            Bucket = ARTICLES_BUCKET, 
+            Key = article_name
+        )
+        text = response["Body"].read().decode("utf-8")
+        files[article_name] = text
+
+    return files
 
 
 """

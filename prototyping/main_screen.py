@@ -22,6 +22,8 @@ if "upload_count" not in st.session_state:
 if "article_labels" not in st.session_state: 
     st.session_state.article_labels = get_document_labels()
 
+if "selected_articles" not in st.session_state: 
+    st.session_state.selected_articles = []
 
 
 
