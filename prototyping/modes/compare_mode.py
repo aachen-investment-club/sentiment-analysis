@@ -1,6 +1,6 @@
 import streamlit as st
 from components.article_upload import file_upload
-from components.article_selector_compare_mode import article_selection
+from components.article_selector import article_selection_compare_mode
 from config import constants as const
 
 def render(): 
@@ -23,7 +23,7 @@ def render():
     if st.toggle(const.COMPARE_MODE_SELECT_TOGGLE):
         st.write(const.MSG_SELECT_DOCUMENTS)
         # Article Selection according to Compare mode
-        article_selection()
+        article_selection_compare_mode()
 
     st.divider()
 

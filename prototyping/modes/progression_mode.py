@@ -1,5 +1,5 @@
 import streamlit as st
-from components.article_selector import article_selection
+from components.article_selector import article_selection_progression_mode
 from components.article_upload import file_upload
 from config import constants as const
 
@@ -23,7 +23,7 @@ def render():
     if st.toggle(const.PROGRESSION_MODE_SELECT_TOGGLE): 
 
         st.write(const.MSG_SELECT_DOCUMENTS)
-        article_selection()
+        article_selection_progression_mode()
 
 
     st.divider()
