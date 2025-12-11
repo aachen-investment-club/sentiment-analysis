@@ -1,4 +1,6 @@
 import streamlit as st
+from utils import setup_path
+setup_path()
 from backend.aws_querying.DocumentData import list_articles
 
 def article_selection(): 
