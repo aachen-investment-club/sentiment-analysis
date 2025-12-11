@@ -1,8 +1,8 @@
 import streamlit as st
 from io import StringIO
-from backend.aws_querying.DocumentData import add_article_pdf, add_article_text, list_articles
-
-
+from backend.aws_querying.DocumentData import add_article_pdf, add_article_text, list_articles, get_articles_s3
+from backend.ml.sentiment_analysis import sentiment_analysis_text
+from typing import List
 
 
 
@@ -28,20 +28,63 @@ def progresssion_mode():
 
         st.write("select documents to use")
         article_selection()
+        
 
 
     st.divider()
     if st.toggle("start analysis"): 
 
         st.write("analysis started")
+        get_articles()
 
     st.divider()
     if st.toggle("export document"): 
 
         st.write("download PDF")
 
-def file_upload(index: int):
 
+
+
+def get_articles() : 
+    articles = st.session_state.selected_articles
+    articles = get_articles_s3(articles)
+
+    st.write(articles)
+
+    run_finbert(articles)
+
+
+def run_finbert(files): 
+
+    overall_results = {}
+    for file, text in files.items(): 
+        overall_sentiment, confidence, results = sentiment_analysis_text(
+            text,  
+            german = False, 
+            regression = False
+        )
+        overall_results[file]= {
+            "sentiment": overall_sentiment, 
+            "confidence": confidence, 
+            "results": results
+        } 
+
+    st.write(overall_results)
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+def file_upload(index: int):
 
     format = "text"
     with st.container(border=True, key=f"container_textinput_{index}"):
@@ -59,10 +102,21 @@ def file_upload(index: int):
 
             source = st.selectbox(
                 "Source",
-                options=["Reuters", "Bloomberg", "WSJ", "Internal"], 
+                options=["Handelsblatt", "Euro", 
+                         "Tagesschau", "", 
+                         "Statistisches Bundesamt", "Die Zeit", 
+                         "Other", "Eurostat", 
+                         "FAZ", "ZDF", "Federal Reserve"
+                         "Spiegel", 
+                         "Reuters", "Bloomberg", "WSJ", "Internal"], 
                 #:  TODO: add more sources; maybe a big list; can be 
                 # discussed with the news team
                 key=f"source_{index}",
+            )
+            assets = st.multiselect(
+                "Language",
+                options=["English", "German"], 
+                key=f"language_{index}",
             )
 
         with col2:
@@ -147,7 +201,8 @@ def file_upload(index: int):
 def article_selection(): 
 
     articles = list_articles()
-    selection = []
+
+    st.session_state.selected_articles = []
     for article in articles: 
         with st.container(border = True): 
             col1, col2 = st.columns([0.9,0.1])
@@ -180,10 +235,10 @@ def article_selection():
 
 
         if checked: 
-            selection.append(article["DocumentID"])
+            st.session_state.selected_articles.append(article["file_name"])
 
     if st.toggle("Commit selection"): 
-        st.write(f"selected articles: {selection}")
+        st.write(f"selected articles: {st.session_state.selected_articles}")
 
 
 
