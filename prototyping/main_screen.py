@@ -5,9 +5,9 @@ import os
 from dotenv import load_dotenv
 from modes import progression_mode, compare_mode
 from config import constants as const
+from utils import setup_path
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(ROOT_DIR)
+setup_path()
 load_dotenv()
 
 from backend.aws_querying.DocumentData import get_document_labels
