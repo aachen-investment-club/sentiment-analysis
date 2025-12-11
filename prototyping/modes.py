@@ -108,7 +108,9 @@ def file_upload(index: int):
                          "Other", "Eurostat", 
                          "FAZ", "ZDF", "Federal Reserve"
                          "Spiegel", 
-                         "Reuters", "Bloomberg", "WSJ", "Internal"], 
+                         "Reuters", "Bloomberg", "WSJ", "Internal", 
+                         "Yahoo Finance", "Investopedia", "BBC", "CNN"
+                         ], 
                 #:  TODO: add more sources; maybe a big list; can be 
                 # discussed with the news team
                 key=f"source_{index}",
