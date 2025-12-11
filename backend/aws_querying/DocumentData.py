@@ -6,6 +6,7 @@ from io import StringIO
 import pandas as pd
 
 from boto3.dynamodb.conditions import Key, Attr
+from backend.ml.preprocessing import extract_pdf_text
 #import streamlit as st
 
 ARTICLES_BUCKET = "articles-sentiment"
@@ -112,15 +113,24 @@ def add_article_pdf(
         }
     )
 
-    file.seek(0)
-    response_s3 = s3.put_object(
-        Bucket=ARTICLES_BUCKET,
-        Key=id+ ".pdf",
-        Body=file.read()
-    )
+
+    text = extract_pdf_text(file)
+
+    if add_article_text(
+        date, 
+        assets, 
+        commodities, 
+        markets,
+        source,
+        text, 
+        title
+    ): 
+        return True
+    return False
 
 
-    return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
+   
+
 
 def list_articles(): 
     dynamodb = boto3.resource("dynamodb", region_name="eu-central-1")
@@ -133,6 +143,21 @@ def list_articles():
 
     return False
 
+def get_articles_s3(articles: List[str]): 
+    client= boto3.client("s3")
+
+
+    response = client.list_objects_v2(Bucket = ARTICLES_BUCKET)
+    files = {}
+    for article_name in articles: 
+        response = client.get_object(
+            Bucket = ARTICLES_BUCKET, 
+            Key = article_name
+        )
+        text = response["Body"].read().decode("utf-8")
+        files[article_name] = text
+
+    return files
 
 
 """

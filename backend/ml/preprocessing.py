@@ -1,7 +1,7 @@
 from typing import List, Tuple
 from pathlib import Path
 from collections import defaultdict
-import fitz  # PyMuPDF for text extraction
+import pymupdf # PyMuPDF for text extraction
 import pdfplumber  # For table extraction and complex layouts
 import re # For regular expressions
 import nltk
@@ -25,6 +25,41 @@ def preprocess_text(raw_text:str) -> List[str]:
     
     return nltk.sent_tokenize(raw_text) 
 
+
+
+def extract_pdf_text(file) -> str:
+    """
+    Extract text from PDF bytes and return cleaned text.
+    Handles multi-column layouts by reading each column completely
+    before moving to the next (left-to-right, top-to-bottom).
+    """
+
+    # Convert to Path object for better path handling
+    
+    # Open PDF and extract text with correct reading order
+    if file is not None: 
+        filebytes = file.getvalue()
+        doc = pymupdf.open(stream = filebytes, filetype = "pdf")
+        text_parts = []
+        
+        for page in doc:
+            page_text = extract_page_text_with_columns(page)
+            if page_text:
+                text_parts.append(page_text)
+        
+        doc.close()
+        
+        # Combine all pages
+        full_text = "\n\n".join(text_parts)
+        cleaned_text = llm_fine_clean(clean_pdf_text(full_text))
+        return cleaned_text
+    return None
+
+
+
+
+
+
 def preprocess_pdf(pdf_path: str) -> str:
     """
     Extract text from PDF bytes and return cleaned text.
@@ -36,7 +71,7 @@ def preprocess_pdf(pdf_path: str) -> str:
     pdf_path = Path(pdf_path)
     
     # Open PDF and extract text with correct reading order
-    doc = fitz.open(str(pdf_path))
+    doc = pymupdf.open(str(pdf_path))
     text_parts = []
     
     for page in doc:
