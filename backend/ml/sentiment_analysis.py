@@ -79,5 +79,3 @@ def aggregate_sentiment(sentence_sentiment: list[dict]) -> dict:
     confidence = round(max_score * 100, 1)
 
     return max_label, confidence
-
-print("hello")
