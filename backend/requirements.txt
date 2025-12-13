@@ -11,3 +11,7 @@ openai>=1.0.0
 python-dotenv>=1.0.0  # For loading API keys from .env file
 # Text Processing
 nltk>=3.8.0
+# ML Models
+transformers>=4.30.0
+torch>=2.0.0
+sacremoses>=0.0.53  # Required for better tokenization in translation models
