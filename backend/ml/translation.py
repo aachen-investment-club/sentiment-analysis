@@ -41,18 +41,3 @@ def translate_to_english(german_texts: List[str]) -> List[str]:
     translations = _TOKENIZER.batch_decode(outputs, skip_special_tokens=True)
     
     return translations
-
-
-if __name__ == "__main__":
-    # Example usage: Batch translation (list of strings)
-    print("=== Translation Example ===")
-    german_texts = [
-        "Es gibt einen Mangel an Kapital und wir benötigen zusätzliche Finanzierung.",
-        "Das Wachstum ist stark und wir haben reichlich Liquidität.",
-        "Es gibt Zweifel an unseren Finanzen.",
-        "Die Gewinne sind konstant."
-    ]
-    english_texts = translate_to_english(german_texts)
-    for de, en in zip(german_texts, english_texts):
-        print(f"German: {de}")
-        print(f"English: {en}\n")
