@@ -6,12 +6,9 @@ from io import StringIO
 import pandas as pd
 
 from boto3.dynamodb.conditions import Key, Attr
-#import streamlit as st
+from backend.ml.preprocessing import extract_pdf_text
 
-ARTICLES_BUCKET = "articles-sentiment"
-TABLE_NAME = "sentiment_document_data"
-PK = "DocumentID"
-
+from backend.config import constants as const
 
 
 
@@ -25,16 +22,18 @@ def add_article_text(
     text , 
     title
 ): 
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
 
-    s3 = boto3.client("s3")
+
+
+    s3 = boto3.client(const.S3)
 
     id = str(uuid.uuid1())
 
     response_dynamo = table.put_item(
         Item={
-            PK: id,
+            const.S3_PK: id,
             "date": str(date),
             "assets": assets,
             "commodities": commodities,
@@ -46,7 +45,7 @@ def add_article_text(
     )
 
     response_s3 = s3.put_object(
-        Bucket=ARTICLES_BUCKET,
+        Bucket=const.S3_ARTICLES_BUCKET,
         Key=id+ ".txt",
         Body=text
     )
@@ -56,23 +55,23 @@ def add_article_text(
 
 
 def get_document_labels(): 
-    s3 = boto3.client("s3")
+    s3 = boto3.client(const.S3)
     files = [
-    "markets.csv",
-    "commodities.csv",
-    "assets.csv"
+        "markets.csv",
+        "commodities.csv",
+        "assets.csv"
     ]
     
     categories= [
-    "markets",
-    "commodities",
-    "assets"
+        "markets",
+        "commodities",
+        "assets"
     ]
 
     results = {}
 
     for key,category in zip(files, categories):
-        obj = s3.get_object(Bucket=ARTICLES_BUCKET, Key=key)
+        obj = s3.get_object(Bucket=const.S3_ARTICLES_BUCKET, Key=key)
         body= obj["Body"].read().decode("utf-8")
         df = pd.read_csv(StringIO(body))
 
@@ -114,16 +113,16 @@ def add_article_pdf(
     file, 
     title
 ): 
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
 
-    s3 = boto3.client("s3")
+    s3 = boto3.client(const.S3)
 
     id = str(uuid.uuid1())
 
     response_dynamo = table.put_item(
         Item={
-            PK: id,
+            const.S3_PK: id,
             "date": str(date),
             "assets": assets,
             "commodities": commodities,
@@ -134,19 +133,28 @@ def add_article_pdf(
         }
     )
 
-    file.seek(0)
-    response_s3 = s3.put_object(
-        Bucket=ARTICLES_BUCKET,
-        Key=id+ ".pdf",
-        Body=file.read()
-    )
+
+    text = extract_pdf_text(file)
+
+    if add_article_text(
+        date, 
+        assets, 
+        commodities, 
+        markets,
+        source,
+        text, 
+        title
+    ): 
+        return True
+    return False
 
 
-    return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
+   
+
 
 def list_articles(): 
-    dynamodb = boto3.resource ("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
     response = table.scan()
 
     if response["ResponseMetadata"]["HTTPStatusCode"]==200: 
@@ -155,13 +163,28 @@ def list_articles():
 
     return False
 
+def get_articles_s3(articles: List[str]): 
+    client= boto3.client(const.S3)
+
+
+    response = client.list_objects_v2(Bucket = const.S3_ARTICLES_BUCKET)
+    files = {}
+    for article_name in articles: 
+        response = client.get_object(
+            Bucket = const.S3_ARTICLES_BUCKET, 
+            Key = article_name
+        )
+        text = response["Body"].read().decode("utf-8")
+        files[article_name] = text
+
+    return files
 
 
 """
 def query_table(
 
 ): 
-    dynamodb = boto3.resource ("dynamodb")
+    dynamodb = boto3.resource (const.DYNAMODB)
     table = dynamodb.Table(TABLE_NAME)
 
     response = table.query(
