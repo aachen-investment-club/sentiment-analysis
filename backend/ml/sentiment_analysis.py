@@ -1,4 +1,5 @@
-from backend.ml.preprocessing import preprocess_text
+from backend.ml.preprocessing import preprocess_text, preprocess_pdf
+from backend.ml.translation import translate_to_english
 from transformers import BertTokenizer, BertForSequenceClassification, pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import defaultdict
@@ -10,22 +11,45 @@ _TOKENIZER_C = BertTokenizer.from_pretrained(_MODEL_NAME)
 _TOKENIZER_R = AutoTokenizer.from_pretrained("LHF/finbert-regressor")
 _FINBERT_R= AutoModelForSequenceClassification.from_pretrained("LHF/finbert-regressor")
 
-
+_FINBERT_DE = AutoModelForSequenceClassification.from_pretrained('scherrmann/GermanFinBert_SC_Sentiment')
+_TOKENIZER_DE = AutoTokenizer.from_pretrained('scherrmann/GermanFinBert_SC_Sentiment')
 
 _PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZER_R)
 
-
-
-def sentiment_analysis(text: str, regression: bool = False) -> tuple[str, float, list[dict]]:
+def sentiment_analysis_text(text: str, german: bool, regression: bool = False) -> tuple[str, float, list[dict]]:
+    preprocessed_text = preprocess_text(text)
     if regression: 
         _PIPELINE.model = _FINBERT_R
         _PIPELINE.tokenizer = _TOKENIZER_R
     else: 
-        _PIPELINE.model = _FINBERT_C
-        _PIPELINE.tokenizer = _TOKENIZER_C
+        if german:
+            # Translate German to English, then use English FinBERT model
+            preprocessed_text = translate_to_english(preprocessed_text)
+            _PIPELINE.model = _FINBERT_C
+            _PIPELINE.tokenizer = _TOKENIZER_C
+        else:
+            _PIPELINE.model = _FINBERT_C
+            _PIPELINE.tokenizer = _TOKENIZER_C
+        
+    results = _PIPELINE(preprocessed_text)
+    overall_sentiment, confidence = aggregate_sentiment(results)
+    return overall_sentiment, confidence, results
 
+def sentiment_analysis_pdf(pdf_url: str, german: bool, regression: bool = False) -> tuple[str, float, list[dict]]:
+    preprocessed_text = preprocess_pdf(pdf_url)
+    if regression: 
+        _PIPELINE.model = _FINBERT_R
+        _PIPELINE.tokenizer = _TOKENIZER_R
+    else: 
+        if german:
+            # Translate German to English, then use English FinBERT model
+            preprocessed_text = translate_to_english(preprocessed_text)
+            _PIPELINE.model = _FINBERT_C
+            _PIPELINE.tokenizer = _TOKENIZER_C
+        else:
+            _PIPELINE.model = _FINBERT_C
+            _PIPELINE.tokenizer = _TOKENIZER_C
 
-    preprocessed_text = preprocess_text(text)
     results = _PIPELINE(preprocessed_text)
     overall_sentiment, confidence = aggregate_sentiment(results)
     return overall_sentiment, confidence, results
