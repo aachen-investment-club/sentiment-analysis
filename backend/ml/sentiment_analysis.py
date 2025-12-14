@@ -15,6 +15,7 @@ from backend.ml.finbert_regression import analyze_sentiment_regression
 from transformers import BertTokenizer, BertForSequenceClassification, pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import defaultdict
+import spacy
 
 _MODEL_NAME = "yiyanghkust/finbert-tone"
 _FINBERT_C = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
@@ -197,20 +198,44 @@ FINANCIAL_KEYWORDS = [
 # Convert list to set for efficient lookup and to ensure uniqueness
 FINANCIAL_KEYWORDS = set(FINANCIAL_KEYWORDS)
 
+# Lazy loading of spaCy model for lemmatization
+_nlp = None
+
+def _get_spacy_model():
+    """Lazy load spaCy model for lemmatization."""
+    global _nlp
+    if _nlp is None:
+        try:
+            _nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+        except OSError:
+            raise OSError(
+                "spaCy English model 'en_core_web_sm' not found. "
+                "Install it with: python -m spacy download en_core_web_sm"
+            )
+    return _nlp
+
 
 def count_financial_keywords(sentence: str, keywords: set[str] = FINANCIAL_KEYWORDS) -> int:
     """
     Count the number of high-impact financial keywords in a sentence.
+    Uses spaCy lemmatization to match keywords (which are already lemmatized).
     
     Args:
         sentence: The sentence text to analyze
-        keywords: Set of keywords to search for (case-insensitive)
+        keywords: Set of lemmatized keywords to search for (case-insensitive)
         
     Returns:
         Count of keyword matches
     """
-    sentence_lower = sentence.lower()
-    return sum(1 for keyword in keywords if keyword in sentence_lower)
+    # Load spaCy model and process sentence
+    nlp = _get_spacy_model()
+    doc = nlp(sentence.lower())
+    
+    # Extract lemmatized words from the sentence
+    lemmatized_words = {token.lemma_.lower() for token in doc if not token.is_punct and not token.is_space}
+    
+    # Count how many keywords match the lemmatized words
+    return sum(1 for keyword in keywords if keyword.lower() in lemmatized_words)
 
 
 def aggregate_sentiment_regression(
@@ -330,3 +355,97 @@ def aggregate_sentiment_regression(
         print("=" * 80 + "\n")
     
     return sentiment_label, confidence
+
+
+
+if __name__ == "__main__":
+    import os
+    
+    # Path to the example Bitcoin article (German)
+    project_root = Path(__file__).parent.parent.parent
+    pdf_path = project_root / "example_articles" / "bitcoin_article.pdf"
+    
+    if not pdf_path.exists():
+        print(f"Error: PDF not found at {pdf_path}")
+        print("Please ensure the file exists at example_articles/bitcoin_article.pdf")
+    else:
+        print("=" * 80)
+        print("Testing Sentiment Analysis on Bitcoin Article (German PDF)")
+        print("=" * 80)
+        print(f"PDF Path: {pdf_path}\n")
+        
+        # Test Classification
+        print("\n" + "-" * 80)
+        print("CLASSIFICATION MODEL (yiyanghkust/finbert-tone)")
+        print("-" * 80)
+        try:
+            overall_sentiment, confidence, results = sentiment_analysis_pdf(
+                str(pdf_path), 
+                german=True, 
+                regression=False
+            )
+            print(f"Overall Sentiment: {overall_sentiment}")
+            print(f"Confidence: {confidence}%")
+            print(f"Number of sentences analyzed: {len(results)}")
+            
+            # Show distribution of labels
+            label_counts = defaultdict(int)
+            for result in results:
+                label_counts[result['label']] += 1
+            print(f"\nLabel Distribution:")
+            for label, count in sorted(label_counts.items()):
+                percentage = (count / len(results)) * 100
+                print(f"  {label}: {count} sentences ({percentage:.1f}%)")
+            
+            # Show sample results
+            print(f"\nSample Results (first 5 sentences):")
+            for i, result in enumerate(results[:5], 1):
+                print(f"  {i}. {result['label']}: {result['score']:.4f}")
+                
+        except Exception as e:
+            print(f"Error in classification: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Test Regression (with normalization)
+        print("\n" + "-" * 80)
+        print("REGRESSION MODEL (LHF/finbert-regressor) - With Normalization")
+        print("-" * 80)
+        try:
+            overall_sentiment, confidence, results = sentiment_analysis_pdf(
+                str(pdf_path), 
+                german=True, 
+                regression=True,
+                normalize=True
+            )
+            scores = [r['score'] for r in results]
+            avg_score = sum(scores) / len(scores)
+            min_score = min(scores)
+            max_score = max(scores)
+            
+            print(f"Overall Sentiment: {overall_sentiment}")
+            print(f"Average Score: {avg_score:.4f}")
+            print(f"Confidence (abs avg): {confidence}%")
+            print(f"Number of sentences analyzed: {len(results)}")
+            print(f"Score Range: [{min_score:.4f}, {max_score:.4f}]")
+            
+            # Count positive/negative/neutral
+            positive_count = sum(1 for s in scores if s > 0.1)
+            negative_count = sum(1 for s in scores if s < -0.1)
+            neutral_count = len(scores) - positive_count - negative_count
+            
+            print(f"\nSentiment Distribution:")
+            print(f"  Positive (>0.1): {positive_count} sentences ({(positive_count/len(scores)*100):.1f}%)")
+            print(f"  Neutral (-0.1 to 0.1): {neutral_count} sentences ({(neutral_count/len(scores)*100):.1f}%)")
+            print(f"  Negative (<-0.1): {negative_count} sentences ({(negative_count/len(scores)*100):.1f}%)")
+            
+            # Show sample results
+            print(f"\nSample Results (first 5 sentences):")
+            for i, result in enumerate(results[:5], 1):
+                sentiment_label = "POSITIVE" if result['score'] > 0.1 else ("NEGATIVE" if result['score'] < -0.1 else "NEUTRAL")
+                print(f"  {i}. [{sentiment_label:8}] Score: {result['score']:+.4f}")
+                
+        except Exception as e:
+            print(f"Error in regression (with normalization): {e}")
+            import traceback
+            traceback.print_exc()
