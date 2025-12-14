@@ -33,6 +33,7 @@ def sentiment_analysis_text(text: str, german: bool, regression: bool = False) -
         
     results = _PIPELINE(preprocessed_text)
     overall_sentiment, confidence = aggregate_sentiment(results)
+    most_relevant_phrase = get_most_relevat_phrase(preprocessed_text, results)
     return overall_sentiment, confidence, results
 
 def sentiment_analysis_pdf(pdf_url: str, german: bool, regression: bool = False) -> tuple[str, float, list[dict]]:
@@ -79,3 +80,18 @@ def aggregate_sentiment(sentence_sentiment: list[dict]) -> dict:
     confidence = round(max_score * 100, 1)
 
     return max_label, confidence
+
+
+def get_most_relevat_phrase(sentences: list[str], sentence_sentiment: list[dict]) -> tuple[str, float, str]:
+
+    most_relevant_phrase = ""
+    max_impact_score = -1.0
+    sentiment = ""
+
+    for i, pred in sentence_sentiment:
+        if pred['score'] > max_impact_score:
+                max_impact_score = pred['score']
+                most_relevant_phrase = sentences[i]
+                sentiment = pred['label']
+    
+    return most_relevant_phrase, max_impact_score, sentiment
