@@ -81,28 +81,6 @@ def get_document_labels():
     return results 
 
 
-def local_get_document_labels(): 
-    files = [
-    "markets.csv",
-    "commodities.csv",
-    "assets.csv"
-    ]
-    
-    categories= [
-    "markets",
-    "commodities",
-    "assets"
-    ]
-
-    results = {}
-
-    for key,category in zip(files, categories):
-        df = pd.read_csv('./local_test_data/'+key)
-        results[category] = df.iloc[:, -1].dropna().tolist()
-
-    return results 
-
-
 
 def add_article_pdf(
     date: dte, 

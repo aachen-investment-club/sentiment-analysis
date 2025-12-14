@@ -1,6 +1,7 @@
 import streamlit as st
 from components.article_selector import article_selection_progression_mode, article_selection_lower_bound
 from components.article_upload import file_upload
+from backend.pdfoutput.pdf_creation import generate_pdf
 from config import constants as const
 
 def render(): 
@@ -39,5 +40,12 @@ def render():
     # Export Step
     if st.toggle(const.PROGRESSION_MODE_EXPORT_TOGGLE): 
 
-        st.write(const.MSG_EXPORT_PDF)
+        pdf_bytes = generate_pdf()
+        
+        st.download_button(
+            label="Download PDF",
+            data=pdf_bytes,
+            file_name="generated_report.pdf",
+            mime="application/pdf"
+        )
             
