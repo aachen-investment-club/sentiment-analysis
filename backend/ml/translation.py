@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from typing import List
 import torch
-from preprocessing import preprocess_pdf
+from backend.ml.preprocessing import preprocess_pdf
 
 # Model and tokenizer - loaded once at module import (following sentiment_analysis.py pattern)
 _MODEL_NAME = "Helsinki-NLP/opus-mt-de-en"
