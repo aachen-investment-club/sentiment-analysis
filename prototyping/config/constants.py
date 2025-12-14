@@ -61,3 +61,9 @@ MSG_ARTICLE_SAVED = "Article successfully saved!"
 # ============================================================================
 ERR_NO_TEXT = "Please enter article text before saving."
 ERR_NO_PDF = "Please upload a PDF file before saving."
+
+
+# ============================================================================
+# Demo text in export pdf
+# ============================================================================
+TEXT_INPUT = "Your advertisement could be here."
