@@ -5,7 +5,7 @@ import pandas as pd
 
 from backend.config import constants as const
 
-def get_asset(start_date: dte, asset: const.Asset, granularity:const.Granularity = const.Granularity.MONTH_GRANULARITY): 
+def get_asset(asset: const.Asset,start_date: dte,  granularity:const.Granularity = const.Granularity.MONTH_GRANULARITY): 
 
     output = yf.download(
         asset, 
