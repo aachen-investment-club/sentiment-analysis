@@ -17,7 +17,7 @@ PROGRESSION_MODE_HEADER = "Sentiment progression over time mode"
 # ============================================================================
 # UI Labels - Toggle Buttons (Compare Mode)
 # ============================================================================
-COMPARE_MODE_UPLOAD_TOGGLE = "start uploading documents"
+COMPARE_MODE_UPLOAD_TOGGLE = "upload document"
 COMPARE_MODE_SELECT_TOGGLE = "select documents"
 COMPARE_MODE_ANALYSIS_TOGGLE = "start analysis"
 COMPARE_MODE_EXPORT_TOGGLE = "export document"
@@ -26,7 +26,7 @@ COMPARE_MODE_EXPORT_TOGGLE = "export document"
 # ============================================================================
 # UI Labels - Toggle Buttons (Progression Mode)
 # ============================================================================
-PROGRESSION_MODE_UPLOAD_TOGGLE = "start uploading documents"
+PROGRESSION_MODE_UPLOAD_TOGGLE = "upload document"
 PROGRESSION_MODE_SELECT_TOGGLE = "select documents"
 PROGRESSION_MODE_ANALYSIS_TOGGLE = "start analysis"
 PROGRESSION_MODE_EXPORT_TOGGLE = "export document"

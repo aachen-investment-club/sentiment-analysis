@@ -1,6 +1,7 @@
 import streamlit as st
 from backend.aws_querying.DocumentData import add_article_pdf, add_article_text
 from config import constants as const
+
 def file_upload(index: int):
 
 
@@ -20,7 +21,7 @@ def file_upload(index: int):
 
             source = st.selectbox(
                 "Source",
-                options=["Reuters", "Bloomberg", "WSJ", "Internal"], 
+                options=["Reuters", "Bloomberg", "WSJ", "Bitcoin.com News", "Internal"], 
                 #:  TODO: add more sources; maybe a big list; can be 
                 # discussed with the news team
                 key=f"source_{index}",
@@ -97,7 +98,17 @@ def file_upload(index: int):
 
                 add_article_pdf(file_date, assets, commodities, markets,  source, file, title)
 
-            st.success(const.MSG_ARTICLE_SAVED)
-            return True
+            # --- Reset input widgets for this index ---
+            for key_suffix in ["date_input", "source", "assets", "commodities", "markets", "format", "title", "textinput", "uploader", "button_upload"]:
+                widget_key = f"{key_suffix}_{index}"
+                if widget_key in st.session_state:
+                    del st.session_state[widget_key]
+            
+            # Mark that upload was successful and hide form
+            st.session_state.show_upload_form = False
+            st.session_state.upload_success = True
+            
+            # Force rerun to show success message and hide form
+            st.rerun()
 
-    return False
+    return True
