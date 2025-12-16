@@ -1,6 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from typing import List
 import torch
+from backend.ml.preprocessing import preprocess_pdf
 
 # Model and tokenizer - loaded once at module import (following sentiment_analysis.py pattern)
 _MODEL_NAME = "Helsinki-NLP/opus-mt-de-en"
@@ -41,3 +42,7 @@ def translate_to_english(german_texts: List[str]) -> List[str]:
     translations = _TOKENIZER.batch_decode(outputs, skip_special_tokens=True)
     
     return translations
+
+if __name__ == "__main__":
+    sentences = translate_to_english(preprocess_pdf("../../example_articles/bitcoin_article.pdf"))
+    print(sentences)
