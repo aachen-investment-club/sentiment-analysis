@@ -10,12 +10,26 @@ def render():
     # Upload Step
     if st.toggle(const.PROGRESSION_MODE_UPLOAD_TOGGLE): 
 
+        # Initialize session state for form visibility
+        if "show_upload_form" not in st.session_state:
+            st.session_state.show_upload_form = False
+        if "upload_success" not in st.session_state:
+            st.session_state.upload_success = False
+        
+        # Show success message if upload was successful
+        if st.session_state.upload_success:
+            st.success(const.MSG_ARTICLE_SAVED)
+            st.session_state.upload_success = False
+        
+        # Button to show the upload form
         if st.button(const.BTN_ADD_DOCUMENT):
-            st.session_state.upload_count += 1
-
-        for i in range(1, st.session_state.upload_count+1):
-            st.subheader(f"Document {i}")
-            file_upload(i)
+            st.session_state.show_upload_form = True
+            st.rerun()
+        
+        # Show upload form only if user clicked the button
+        if st.session_state.show_upload_form:
+            st.subheader("Add Document")
+            file_upload(1)
 
     st.divider()
 
