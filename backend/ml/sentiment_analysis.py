@@ -54,8 +54,8 @@ def sentiment_analysis_text(text: str, german: bool, regression: bool = False, n
         
         # Analyze using regression model
         results = analyze_sentiment_regression(preprocessed_sentences, normalize=normalize)
-        overall_sentiment, confidence = aggregate_sentiment_regression(results)
-        return overall_sentiment, confidence, results
+        average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
+        return average, overall_sentiment, confidence, results
     else:
         # Use classification model
         if german:
@@ -354,7 +354,7 @@ def aggregate_sentiment_regression(
         print(f"Confidence: {confidence}%")
         print("=" * 80 + "\n")
     
-    return sentiment_label, confidence
+    return weighted_avg, sentiment_label, confidence
 
 
 

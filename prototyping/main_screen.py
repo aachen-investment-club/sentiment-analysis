@@ -21,6 +21,14 @@ if "article_labels" not in st.session_state:
 if "selected_articles" not in st.session_state: 
     st.session_state.selected_articles = []
 
+
+if "lower_bound_month" not in st.session_state: 
+    st.session_state.lower_bound_month= None
+
+
+if "lower_bound_year" not in st.session_state: 
+    st.session_state.lower_bound_year= None
+
 st.header(const.WELCOME_HEADER)
 
 mode = st.selectbox(

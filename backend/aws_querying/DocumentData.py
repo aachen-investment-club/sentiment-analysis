@@ -12,7 +12,6 @@ from backend.config import constants as const
 
 
 
-
 def add_article_text(
     date: dte, 
     assets: List[str], 
