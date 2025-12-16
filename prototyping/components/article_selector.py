@@ -44,7 +44,10 @@ def article_selection_progression_mode():
 
     if st.toggle("Commit selection"): 
         st.write(f"selected articles: {selection}")
-
+        return selection
+    
+    return []
+    
     # TODO: the part where the documents are fetched for analysis should be executed when 
     # the analysis is started 
 
