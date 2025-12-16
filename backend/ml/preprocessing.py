@@ -91,7 +91,7 @@ def llm_fine_clean(first_pass: str) -> str:
     Cleaned text through regular expression is cleaned in a second round through LLM to identify unidentified leackage of table elements etc.
     """
     response = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-4o-mini",
         input="""You are a text cleaning assistant. Your task is to identify and remove ONLY:
         - Table data and chart elements that leaked into the text
         - Article metadata (dates, author lines, section headers) that are NOT part of the narrative
@@ -318,6 +318,4 @@ def is_table_line(line: str) -> bool:
 
 if __name__ == "__main__":
     sentences = preprocess_pdf("../../example_articles/bitcoin_article.pdf")
-    print(sentences)
-    sentences = llm_fine_clean(preprocess_pdf("../../example_articles/bitcoin_article.pdf"))
     print(sentences)
