@@ -2,6 +2,7 @@ import streamlit as st
 from components.article_selector import article_selection_progression_mode, article_selection_lower_bound
 from components.article_selector import  article_selection_lower_bound_and_asset_filtering
 from components.article_upload import file_upload
+from backend.pdfoutput.pdf_creation import generate_pdf
 from components.sentiment_analysis_launcher import (launch_sentiment_analysis,
     plot_dates_vs_sentiments, get_vix, plot_sentiment_and_vix, compute_sentiment_vix_correlation)
 from config import constants as const
@@ -64,7 +65,8 @@ def render():
             plot_sentiment_and_vix(dates, sentiments, vix)
             corr = compute_sentiment_vix_correlation(dates, sentiments, vix)
             st.metric("Sentiment–VIX correlation", f"{corr:.2f}")
-
+        if st.toggle("reset export data"): 
+            st.session_state.export_data = []
 
 
 
@@ -74,5 +76,12 @@ def render():
     # Export Step
     if st.toggle(const.PROGRESSION_MODE_EXPORT_TOGGLE): 
 
-        st.write(const.MSG_EXPORT_PDF)
+        pdf_bytes = generate_pdf(st.session_state.export_data)
+        
+        st.download_button(
+            label="Download PDF",
+            data=pdf_bytes,
+            file_name="generated_report.pdf",
+            mime="application/pdf"
+        )
             

@@ -12,6 +12,12 @@ load_dotenv()
 
 from backend.aws_querying.DocumentData import get_document_labels
 
+
+
+if "export_data" not in st.session_state:
+    st.session_state.export_data= []
+
+
 if "upload_count" not in st.session_state:
     st.session_state.upload_count = 1
 
