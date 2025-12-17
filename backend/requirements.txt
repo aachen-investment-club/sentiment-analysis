@@ -12,6 +12,9 @@ openai>=1.0.0
 python-dotenv>=1.0.0  # For loading API keys from .env file
 # Text Processing
 nltk>=3.8.0
+spacy>=3.7.0
+# Note: After installing spacy, download the English model:
+# python -m spacy download en_core_web_sm
 # ML Models
 transformers>=4.30.0
 torch>=2.0.0

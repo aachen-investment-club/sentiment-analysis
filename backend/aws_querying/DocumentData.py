@@ -9,6 +9,50 @@ from boto3.dynamodb.conditions import Key, Attr
 from backend.ml.preprocessing import extract_pdf_text
 
 from backend.config import constants as const
+from decimal import Decimal
+import streamlit as st
+
+
+def add_article_sentiment_analysis(
+    document_id, sentiment_average, label, confidence, details
+):
+
+
+
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME_SENTIMENT)
+    for detail in details: 
+        detail["score"]= Decimal(str(detail["score"]))
+
+    data = {
+        "Document_ID": str(document_id), 
+        "average_sentiment": Decimal(str(sentiment_average)), 
+        "label": label, 
+        "confidence": Decimal(str(confidence)), 
+        "details": details
+    }
+
+    response_dynamo = table.put_item(
+        Item=data
+    )
+
+    return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 
+
+
+def check_exists_article_sentiment_analysis(document_id): 
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME_SENTIMENT)
+
+    response = table.get_item(
+        Key = {
+            "Document_ID":document_id 
+        }, 
+    )
+    if "Item" in response: 
+
+        return response["Item"]
+
+    return False 
 
 
 

@@ -14,8 +14,9 @@ class Asset(Enum):
 
 
 S3_ARTICLES_BUCKET = "articles-sentiment"
-DYNAMO_TABLE_NAME = "sentiment_document_data"
 S3_PK = "DocumentID"
 DYNAMODB = "dynamodb"
 S3 = "s3"
 AWS_REGION = "eu-central-1"
+DYNAMO_TABLE_NAME = "sentiment_document_data"
+DYNAMO_TABLE_NAME_SENTIMENT = "developer-sentiment-analysis-outputs"

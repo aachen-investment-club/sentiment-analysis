@@ -11,7 +11,7 @@ def article_selection_progression_mode():
     for article in articles: 
         with st.container(border = True): 
             col1, col2 = st.columns([0.9,0.1])
-            checked = col2.checkbox ("", key = article["DocumentID"])
+            checked = col2.checkbox ("", key = article)
         with col1: 
             st.markdown(f"{article['title']}")
             st.markdown(f"Date: {article['date']}")
@@ -40,11 +40,14 @@ def article_selection_progression_mode():
 
 
         if checked: 
-            selection.append(article["DocumentID"])
+            selection.append(article)
 
     if st.toggle("Commit selection"): 
         st.write(f"selected articles: {selection}")
-
+        return selection
+    
+    return []
+    
     # TODO: the part where the documents are fetched for analysis should be executed when 
     # the analysis is started 
 
@@ -116,7 +119,7 @@ def article_selection_compare_mode():
     for article in filtered_articles: 
         with st.container(border=True): 
             col1, col2 = st.columns([0.9, 0.1])
-            checked = col2.checkbox("", key=article["DocumentID"])
+            checked = col2.checkbox("", key=article)
             
             with col1: 
                 st.markdown(f"**{article['title']}**")
@@ -142,7 +145,7 @@ def article_selection_compare_mode():
                 st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
 
             if checked: 
-                selection.append(article["DocumentID"])
+                selection.append(article)
 
     if st.toggle("Commit selection"): 
         st.write(f"Selected articles: {selection}")
@@ -221,6 +224,11 @@ def article_selection_lower_bound_and_asset_filtering():
         format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
     )
     
+    st.session_state.lower_bound_year = selected_year 
+    st.session_state.lower_bound_month= selected_month
+
+
+
     # Validation
     if not selected_year or not selected_month:
         st.warning("Please select at least one year and one month to filter articles.")
@@ -242,7 +250,12 @@ def article_selection_lower_bound_and_asset_filtering():
             article_assets= set(article["assets"])
             article_commodities= set(article["commodities"])
 
+            any_label_selected = (
+                selected_assets or selected_markets or selected_commodities
+            )
+
             label_expression = (
+                not any_label_selected or
                 (not article_markets.isdisjoint(selected_markets)) or
                 (not article_assets.isdisjoint(selected_assets)) or
                 (not article_commodities.isdisjoint(selected_commodities))
@@ -263,7 +276,7 @@ def article_selection_lower_bound_and_asset_filtering():
     for article in filtered_articles: 
         with st.container(border=True): 
             col1, col2 = st.columns([0.9, 0.1])
-            checked = col2.checkbox("", key=article["DocumentID"])
+            checked = col2.checkbox("", key=article)
             
             with col1: 
                 st.markdown(f"**{article['title']}**")
@@ -289,7 +302,7 @@ def article_selection_lower_bound_and_asset_filtering():
                 st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
 
             if checked: 
-                selection.append(article["DocumentID"])
+                selection.append(article)
 
     if st.toggle("Commit selection"): 
         st.write(f"Selected articles: {selection}")
@@ -335,12 +348,13 @@ def article_selection_lower_bound():
         "Select Starting Year",
         options=available_years,
     )
-    
     selected_month = st.selectbox(
         "Select Starting Month",
         options=available_months,
         format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
     )
+    st.session_state.lower_bound_year = selected_year 
+    st.session_state.lower_bound_month= selected_month
     
     # Validation
     if not selected_year or not selected_month:
@@ -371,7 +385,7 @@ def article_selection_lower_bound():
     for article in filtered_articles: 
         with st.container(border=True): 
             col1, col2 = st.columns([0.9, 0.1])
-            checked = col2.checkbox("", key=article["DocumentID"])
+            checked = col2.checkbox("", key=article)
             
             with col1: 
                 st.markdown(f"**{article['title']}**")
@@ -397,7 +411,7 @@ def article_selection_lower_bound():
                 st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
 
             if checked: 
-                selection.append(article["DocumentID"])
+                selection.append(article)
 
 
 
