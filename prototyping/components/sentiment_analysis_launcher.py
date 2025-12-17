@@ -10,7 +10,9 @@ import calendar
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from backend.aws_querying.DocumentData import get_articles_s3
+from backend.aws_querying.DocumentData import (get_articles_s3, 
+                                               check_exists_article_sentiment_analysis, 
+                                               add_article_sentiment_analysis )
 from backend.yfinance_querying.yfinance_querying import get_asset
 from datetime import datetime
 
@@ -19,7 +21,7 @@ import pandas as pd
 
 @st.cache_data(show_spinner="Running sentiment analysis...")
 def cached_sentiment_analysis(
-    article_file_names,
+    selected_articles,
     articles_contents,
 ) :
     """
@@ -28,20 +30,38 @@ def cached_sentiment_analysis(
     """
     results = {}
 
-    for article_file_name in article_file_names:
-        average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
-            articles_contents[article_file_name],
-            True,
-            True,
-            False,
-        )
+    article_file_names = [article["file_name"] for article in selected_articles]
 
-        results[article_file_name] = (
-            average,
-            sentiment_label,
-            confidence,
-            analysis_results,
-        )
+    for article, file_name in zip(selected_articles, article_file_names):
+        article_sentiment = check_exists_article_sentiment_analysis(article["DocumentID"])
+        if article_sentiment: 
+            results[file_name] = (article_sentiment["average_sentiment"], article_sentiment["label"], 
+                                  article_sentiment["confidence"], article_sentiment["details"])
+
+        else: 
+
+            average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
+                articles_contents[file_name],
+                True,
+                True,
+                False,
+            )
+            add_article_sentiment_analysis(
+                article["DocumentID"], 
+                average, 
+                sentiment_label, 
+                confidence, 
+                analysis_results
+                
+            )
+
+            results[file_name] = (
+                average,
+                sentiment_label,
+                confidence,
+                analysis_results,
+            )
+            st.write("done caching in dynamodb")
 
     return results
 
@@ -53,7 +73,7 @@ def launch_sentiment_analysis(selected_articles: List):
     articles_contents = get_articles_s3(article_file_names)
 
     sentiment_results = cached_sentiment_analysis(
-        article_file_names,
+        selected_articles, 
         articles_contents,
     )
 
@@ -69,8 +89,6 @@ def launch_sentiment_analysis(selected_articles: List):
     dates = [article["date"] for article in selected_articles]
     sentiments = [article["average_sentiment"] for article in selected_articles]
 
-    st.write(dates)
-    st.write(sentiments)
 
     return dates, sentiments
 
