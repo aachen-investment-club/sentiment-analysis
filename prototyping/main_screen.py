@@ -12,6 +12,12 @@ load_dotenv()
 
 from backend.aws_querying.DocumentData import get_document_labels
 
+
+
+if "export_data" not in st.session_state:
+    st.session_state.export_data= []
+
+
 if "upload_count" not in st.session_state:
     st.session_state.upload_count = 1
 
@@ -20,6 +26,14 @@ if "article_labels" not in st.session_state:
 
 if "selected_articles" not in st.session_state: 
     st.session_state.selected_articles = []
+
+
+if "lower_bound_month" not in st.session_state: 
+    st.session_state.lower_bound_month= None
+
+
+if "lower_bound_year" not in st.session_state: 
+    st.session_state.lower_bound_year= None
 
 st.header(const.WELCOME_HEADER)
 
