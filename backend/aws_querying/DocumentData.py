@@ -14,7 +14,7 @@ import streamlit as st
 
 
 def add_article_sentiment_analysis(
-    document_id, sentiment_average, label, confidence, details
+    document_id, sentiment_average, label, confidence, details, language=None
 ):
 
 
@@ -31,6 +31,10 @@ def add_article_sentiment_analysis(
         "confidence": Decimal(str(confidence)), 
         "details": details
     }
+    
+    # Add language if provided
+    if language:
+        data["language"] = language
 
     response_dynamo = table.put_item(
         Item=data
@@ -64,7 +68,8 @@ def add_article_text(
     markets: List[str], 
     source: str,
     text , 
-    title
+    title,
+    language: str = None
 ): 
     dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
     table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
@@ -75,18 +80,22 @@ def add_article_text(
 
     id = str(uuid.uuid1())
 
-    response_dynamo = table.put_item(
-        Item={
-            const.S3_PK: id,
-            "date": str(date),
-            "assets": assets,
-            "commodities": commodities,
-            "markets": markets,
-            "source": source, 
-            "file_name": id+".txt", 
-            "title": title
-        }
-    )
+    item = {
+        const.S3_PK: id,
+        "date": str(date),
+        "assets": assets,
+        "commodities": commodities,
+        "markets": markets,
+        "source": source, 
+        "file_name": id+".txt", 
+        "title": title
+    }
+    
+    # Add language if provided
+    if language:
+        item["language"] = language
+    
+    response_dynamo = table.put_item(Item=item)
 
     response_s3 = s3.put_object(
         Bucket=const.S3_ARTICLES_BUCKET,
@@ -133,7 +142,8 @@ def add_article_pdf(
     markets: List[str], 
     source: str,
     file, 
-    title
+    title,
+    language: str = None
 ): 
     dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
     table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
@@ -142,19 +152,22 @@ def add_article_pdf(
 
     id = str(uuid.uuid1())
 
-    response_dynamo = table.put_item(
-        Item={
-            const.S3_PK: id,
-            "date": str(date),
-            "assets": assets,
-            "commodities": commodities,
-            "markets": markets,
-            "source": source, 
-            "file_name": id+".pdf", 
-            "title": title
-        }
-    )
-
+    item = {
+        const.S3_PK: id,
+        "date": str(date),
+        "assets": assets,
+        "commodities": commodities,
+        "markets": markets,
+        "source": source, 
+        "file_name": id+".pdf", 
+        "title": title
+    }
+    
+    # Add language if provided
+    if language:
+        item["language"] = language
+    
+    response_dynamo = table.put_item(Item=item)
 
     text = extract_pdf_text(file)
 
@@ -165,7 +178,8 @@ def add_article_pdf(
         markets,
         source,
         text, 
-        title
+        title,
+        language
     ): 
         return True
     return False

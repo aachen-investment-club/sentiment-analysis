@@ -5,18 +5,38 @@ from backend.aws_querying.DocumentData import (get_articles_s3,
                                                check_exists_article_sentiment_analysis, 
                                                add_article_sentiment_analysis )
 from tqdm import tqdm 
+from langdetect import detect, LangDetectException
 
 import calendar
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from backend.aws_querying.DocumentData import get_articles_s3
 from backend.yfinance_querying.yfinance_querying import get_asset
 from datetime import datetime
 
 import pandas as pd
 
+
+def is_article_german(article: dict) -> bool:
+    """
+    Detect if an article is in German based on its title.
+    Returns True if German, False if English.
+    Important to maintain the quality of the text. Without title, text will be assumed to be German (although possibly English) and translated to English.
+    """
+    text_to_analyze = None
+    if article.get("title"):
+        text_to_analyze = article["title"]
+    
+    if not text_to_analyze:
+        # for default we assume the text to be german
+        return True
+    
+    try:
+        detected_lang = detect(text_to_analyze)
+        return True if detected_lang == "de" else False
+    except LangDetectException:
+        return True
 
 
 @st.cache_data(show_spinner="Running sentiment analysis...")
@@ -34,14 +54,26 @@ def cached_sentiment_analysis(
     for article, file_name in zip(selected_articles, article_file_names):
         article_sentiment = check_exists_article_sentiment_analysis(article["DocumentID"])
         if article_sentiment: 
+            # Load language from cached sentiment analysis if available
+            if "language" in article_sentiment and "language" not in article:
+                article["language"] = article_sentiment["language"]
+            
             results[file_name] = (article_sentiment["average_sentiment"], article_sentiment["label"], 
                                   article_sentiment["confidence"], article_sentiment["details"])
 
         else: 
-
+            # Get language from article metadata (from DynamoDB), detect if not available, or use cached value
+            if "language" not in article:
+                # Auto-detect if not provided (language not in article metadata from DynamoDB)
+                is_german = is_article_german(article)
+                article["language"] = "de" if is_german else "en"
+            else:
+                # Language already exists in article dict (from DynamoDB or previous processing)
+                is_german = article["language"] == "de"
+            
             average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
                 articles_contents[file_name],
-                True,
+                is_german,
                 True,
                 False,
             )
@@ -50,8 +82,8 @@ def cached_sentiment_analysis(
                 average, 
                 sentiment_label, 
                 confidence, 
-                analysis_results
-                
+                analysis_results,
+                article["language"]  # Store language in DynamoDB
             )
 
             results[file_name] = (
