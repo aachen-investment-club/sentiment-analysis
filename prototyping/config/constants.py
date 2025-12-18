@@ -2,7 +2,7 @@
 # Mode Display Names
 # ============================================================================
 MODE_PROGRESSION = "Sentiment over time mode"
-MODE_COMPARISON = "Asset sentiment comparisson mode"
+MODE_COMPARISON = "Asset sentiment comparison mode"
 MODE_NONE = None
 
 
@@ -10,7 +10,7 @@ MODE_NONE = None
 # UI Headers - Mode Titles
 # ============================================================================
 WELCOME_HEADER = "Welcome to AIC's sentiment analyser"
-COMPARE_MODE_HEADER = "Asset sentiment comparisson mode"
+COMPARE_MODE_HEADER = "Asset sentiment comparison mode"
 PROGRESSION_MODE_HEADER = "Sentiment progression over time mode"
 
 
