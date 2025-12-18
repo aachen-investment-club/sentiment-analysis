@@ -69,19 +69,7 @@ def render():
             # Plot sentiment progression
             plot_dates_vs_sentiments(df)
         
-            # Show basic statistics
-            if df is not None:
-                avg_sentiment = df["average_sentiment"].mean()
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
-                with col2:
-                    st.metric("Article Count", len(df["average_sentiment"]))
-                with col3:
-                    sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
-                    st.metric("Overall Sentiment", sentiment_label)
-        
+            
         st.divider()
         
         # VIX Analysis (optional)
@@ -91,7 +79,6 @@ def render():
             with st.spinner("Fetching VIX data..."):
                 vix = get_vix()
             
-            # Plot sentiment vs VIX
             plot_sentiment_and_vix(df, vix)
             
             # Calculate and display correlation

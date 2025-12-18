@@ -3,40 +3,14 @@ from config import constants as const
 from typing import List
 import plotly 
 import io 
+from backend.pdfoutput.pdf_components import TemplateAIC, PlotExport
 
 
 
 
-
-class TemplatePDF(FPDF):
-
-    def header(self):
-        # ---- Colors ----
-        self.set_draw_color(10, 44, 95)  # dark blue
-        self.set_line_width(2)
-
-        # ---- Page border ----
-        margin = 10
-        self.rect(
-            margin,
-            margin,
-            self.w - 2 * margin,
-            self.h - 2 * margin
-        )
-
-        # ---- Logo ----
-        self.image("./static/aic_logo.png", x=(self.w - 60) / 2, y=15, w=60)
-
-        # ---- Move cursor below logo ----
-        self.ln(35)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Arial", size=8)
-        self.cell(0, 10, str(self.page_no()), align="R")
 
 def generate_pdf(data: list) -> bytes:
-    pdf = TemplatePDF()
+    pdf = TemplateAIC()
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
@@ -49,26 +23,9 @@ def generate_pdf(data: list) -> bytes:
     img_width = safe_width * 0.7
     # ---- Content ----
     for component in data:
-        fig = component["figure"]
-        interpretation = component["interpretation"]
+        if isinstance(component, PlotExport): 
+            component.draw(pdf, safe_x, safe_width, img_width)
 
-        if fig.data:
-            img_bytes = fig.to_image(format="png", scale=2)
-            img_stream = io.BytesIO(img_bytes)
-            img_x = safe_x + (safe_width - img_width) / 2
-
-            pdf.image(img_stream, x=img_x, w=img_width)
-            pdf.ln(4)
-        
-        if "correlation" in component and "average_sentiment" in component and "document_count" in component and "overall_sentiment" in component: 
-            draw_metrics_row(pdf, component, safe_x, safe_width)
-
-
-        pdf.set_font("Arial", size=11)
-        pdf.set_x(safe_x)
-
-        pdf.multi_cell(safe_width, 7, interpretation)
-        pdf.ln(10)
 
     return bytes(pdf.output(dest="S"))
 
