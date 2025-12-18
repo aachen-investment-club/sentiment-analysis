@@ -58,8 +58,12 @@ def cached_sentiment_analysis(
             if "language" in article_sentiment and "language" not in article:
                 article["language"] = article_sentiment["language"]
             
-            results[file_name] = (article_sentiment["average_sentiment"], article_sentiment["label"], 
-                                  article_sentiment["confidence"], article_sentiment["details"])
+            # Convert Decimal to float for consistency (DynamoDB returns Decimal)
+            avg_sentiment = float(article_sentiment["average_sentiment"])
+            confidence = float(article_sentiment["confidence"])
+            
+            results[file_name] = (avg_sentiment, article_sentiment["label"], 
+                                  confidence, article_sentiment["details"])
 
         else: 
             # Get language from article metadata (from DynamoDB), detect if not available, or use cached value
@@ -182,7 +186,7 @@ def launch_sentiment_analysis_comparison(selected_articles: List, filters: Dict)
     article_file_names = tuple(article["file_name"] for article in selected_articles)
     articles_contents = get_articles_s3(article_file_names)
     sentiment_results = cached_sentiment_analysis(
-        article_file_names,
+        selected_articles,
         articles_contents,
     )
     
