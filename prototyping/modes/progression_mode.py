@@ -57,13 +57,13 @@ def render():
 
         if st.toggle("start the sentiment analysis"): 
 
-            dates, sentiments = launch_sentiment_analysis(selected_articles)
-            plot_dates_vs_sentiments(dates, sentiments)
+            sentiment_df = launch_sentiment_analysis(selected_articles)
+            plot_dates_vs_sentiments(sentiment_df)
         if st.toggle("Include VIX"): 
             vix=get_vix() 
 
-            plot_sentiment_and_vix(dates, sentiments, vix)
-            corr = compute_sentiment_vix_correlation(dates, sentiments, vix)
+            plot_sentiment_and_vix(sentiment_df, vix)
+            corr = compute_sentiment_vix_correlation(sentiment_df, vix)
             st.metric("Sentiment–VIX correlation", f"{corr:.2f}")
         if st.toggle("reset export data"): 
             st.session_state.export_data = []

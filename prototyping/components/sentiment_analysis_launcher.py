@@ -88,9 +88,21 @@ def launch_sentiment_analysis(selected_articles: List):
 
     dates = [article["date"] for article in selected_articles]
     sentiments = [article["average_sentiment"] for article in selected_articles]
+    df = pd.DataFrame({
+        "date": dates, 
+        "average_sentiment":sentiments 
+    })
 
 
-    return dates, sentiments
+    df = (
+        df
+        .groupby("date", as_index=False)["average_sentiment"]
+        .mean()
+    )   
+
+
+
+    return df
 
 
 
@@ -138,13 +150,13 @@ def get_vix ():
 
 
 
-def plot_dates_vs_sentiments(dates, sentiments): 
+def plot_dates_vs_sentiments(df): 
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatter(
-            x=dates,
-            y=sentiments,
+            x=df["date"],
+            y=df["average_sentiment"],
             mode="lines+markers",
             name="Values"
         )
@@ -176,7 +188,7 @@ def plot_dates_vs_sentiments(dates, sentiments):
 
 
 
-def plot_sentiment_and_vix(dates, sentiments, vix_data):
+def plot_sentiment_and_vix(sentiments, vix_data):
     """
     dates: list of article dates (strings or datetimes)
     sentiments: list of sentiment scores
@@ -188,8 +200,8 @@ def plot_sentiment_and_vix(dates, sentiments, vix_data):
     # Sentiment trace (primary axis)
     fig.add_trace(
         go.Scatter(
-            x=pd.to_datetime(dates),
-            y=sentiments,
+            x=pd.to_datetime(sentiments["date"]),
+            y=sentiments["average_sentiment"],
             mode="lines+markers",
             name="Sentiment Score",
         ),
