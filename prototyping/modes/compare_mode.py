@@ -3,6 +3,7 @@ from components.article_upload import file_upload
 from components.article_selector import article_selection_compare_mode
 from components.sentiment_analysis_launcher import launch_sentiment_analysis_comparison
 from config import constants as const
+from backend.pdfoutput.pdf_creation import generate_pdf
 
 def render(): 
     st.header(const.COMPARE_MODE_HEADER)
@@ -58,4 +59,11 @@ def render():
 
     # Export Step
     if st.toggle(const.COMPARE_MODE_EXPORT_TOGGLE): 
-        st.write(const.MSG_EXPORT_PDF)
+        pdf_bytes = generate_pdf(st.session_state.export_data)
+        
+        st.download_button(
+            label="Download PDF",
+            data=pdf_bytes,
+            file_name="generated_report.pdf",
+            mime="application/pdf"
+        )
