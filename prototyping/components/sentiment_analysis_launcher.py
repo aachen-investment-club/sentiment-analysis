@@ -284,25 +284,7 @@ def get_vix():
     )
     data.index = data.index.to_pydatetime()
 
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=data.index,
-            y=data[data.columns[0]],
-            mode="lines",
-            name="VIX"
-        )
-    )
-
-    fig.update_layout(
-        title="VIX",
-        xaxis_title="Date",
-        yaxis_title="Value",
-        template="plotly_white"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+  
     return data
 
 
@@ -332,7 +314,7 @@ def plot_dates_vs_sentiments(df):
         label= "Enter an interpretation", 
         key = ""
     )
-    if st.toggle("add to article"): 
+    if st.button("Add to article", key = "export_simple_plot"):
         fig_for_export = go.Figure(fig)  # shallow copy
         fig_for_export.update_layout(annotations=[])
         data ={
@@ -396,6 +378,54 @@ def plot_sentiment_and_vix(sentiments, vix_data):
     fig.update_xaxes(title_text="Date")
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+    corr = compute_sentiment_vix_correlation(list(sentiments["date"]), list(sentiments["average_sentiment"]), vix_data)
+    
+    avg_sentiment = sentiments["average_sentiment"].mean()
+    doc_count = len(sentiments["average_sentiment"]) 
+    sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
+    with col2:
+        st.metric("Article Count", doc_count)
+    with col3:
+        st.metric("Overall Sentiment", sentiment_label)
+    with col4: 
+        st.metric(
+            "Sentiment–VIX Correlation", 
+            f"{corr:.3f}",
+            help="Correlation between sentiment scores and VIX levels. Values range from -1 to 1."
+        )
+
+    interpretation = st.text_area(
+        label= "Enter an interpretation", 
+        key = "interpretation_vis_sentiment", 
+        value = "As we can see in the plot, the VIX correlates negatively with the sentiment. For example, over the months of april and may, there was high volatility in the market. In the same period, the sentiment was negative, therefore confirming an inverse correspondance over this period. Similarly, in periods of better sentiment, the VIX was low. " 
+    )
+
+    if st.button("Add to article", key = "export_sentiment_and_vix"):
+        fig_for_export = go.Figure(fig)
+        fig_for_export.update_layout(annotations=[])
+
+        data = {
+            "figure": fig_for_export,
+            "interpretation": interpretation,
+            "correlation": corr,
+            "average_sentiment": avg_sentiment,
+            "document_count": doc_count,
+            "overall_sentiment": sentiment_label,
+        }
+
+        st.session_state.export_data.append(data)
+        st.success("Added to article")
+
+
+
+
+
 
 
 def align_vix_to_articles(dates, vix_data):
