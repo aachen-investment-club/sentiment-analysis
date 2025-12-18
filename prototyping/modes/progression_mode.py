@@ -6,7 +6,8 @@ from components.sentiment_analysis_launcher import (
     plot_dates_vs_sentiments, 
     get_vix, 
     plot_sentiment_and_vix, 
-    compute_sentiment_vix_correlation
+    compute_sentiment_vix_correlation, 
+    plot_sentiment_vs_asset
 )
 
 from config import constants as const
@@ -81,7 +82,16 @@ def render():
             
             plot_sentiment_and_vix(df, vix)
             
-            # Calculate and display correlation
+        st.divider()
+
+        # Calculate and display correlation
+        if st.toggle("Compare sentiment and assets"):
+
+            plot_sentiment_vs_asset(df)
+
+
+
+        
         if st.button("reset export data"): 
             st.session_state.export_data.clear()
           

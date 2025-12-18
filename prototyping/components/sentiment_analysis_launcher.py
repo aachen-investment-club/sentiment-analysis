@@ -3,7 +3,9 @@ import streamlit as st
 from backend.ml.sentiment_analysis import sentiment_analysis_text 
 from backend.aws_querying.DocumentData import (get_articles_s3, 
                                                check_exists_article_sentiment_analysis, 
-                                               add_article_sentiment_analysis )
+                                               add_article_sentiment_analysis, get_document_labels )
+
+from backend.yfinance_querying.yfinance_querying import get_asset, get_ticker_from_company_name
 from tqdm import tqdm 
 from backend.pdfoutput.pdf_components import PlotExport
 from langdetect import detect, LangDetectException
@@ -17,6 +19,145 @@ from backend.yfinance_querying.yfinance_querying import get_asset
 from datetime import datetime
 
 import pandas as pd
+
+
+def plot_sentiment_vs_asset(
+    sentiment_df
+): 
+    document_labels = get_document_labels()
+    markets = document_labels["markets"]
+    commodities= document_labels["commodities"]
+    assets= document_labels["assets"]
+    selected_assests = st.multiselect(
+        "select assets to visualize", 
+        assets
+    )
+
+    selected_markets= st.multiselect(
+        "select markets to visualize", 
+        markets 
+    )
+
+    selected_commodities= st.multiselect(
+        "select commodities to visualize", 
+        commodities 
+    )
+
+    total_selection = selected_assests + selected_markets+ selected_commodities
+
+
+    if st.toggle("commit selection"): 
+        names_mapping = {item: get_ticker_from_company_name(item) for item in total_selection}
+        if st.session_state.get('lower_bound_year') is None or st.session_state.get('lower_bound_month') is None: 
+            start_date = datetime(2025, 1, 1)
+        else: 
+            start_date = datetime(
+                int(st.session_state.lower_bound_year), 
+                int(st.session_state.lower_bound_month), 
+                1
+            )
+
+        asset_prices= []
+        for key, ticker in names_mapping.items(): 
+            data = get_asset(ticker, start_date= start_date)
+            data.index = pd.to_datetime(data.index)
+            data.index = data.index.to_pydatetime()
+            asset_prices.append(data)
+
+        merged = pd.concat(asset_prices, axis = 1)
+        returns_df = merged.pct_change()
+        returns_df = returns_df.dropna()
+
+
+
+        title = st.text_input("Enter a title for the analysis entry"
+                          , value = "Sentiment vs asset returns", key ="title_input_sentiment_asset_compare")
+
+
+
+        fig = go.Figure()
+
+        # ---- Asset returns (left y-axis) ----
+        for col in returns_df.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=returns_df.index,
+                    y=returns_df[col],
+                    mode="lines",
+                    name=col,
+                    yaxis="y1",
+                )
+            )
+
+        fig.add_trace(
+            go.Scatter(
+                x=sentiment_df["date"],
+                y=sentiment_df["average_sentiment"],
+                mode="lines",
+                name="Sentiment",
+                yaxis="y2",
+                line=dict(dash="dot"),
+            )
+        )
+
+        fig.update_layout(
+            title="Asset Returns vs Sentiment",
+            xaxis_title="Date",
+
+            # Left axis (returns)
+            yaxis=dict(
+                title="Returns",
+                tickformat=".1%",
+                showgrid=True,
+            ),
+
+            # Right axis (sentiment)
+            yaxis2=dict(
+                title="Sentiment",
+                range=[-1, 1],
+                overlaying="y",
+                side="right",
+                showgrid=False,
+            ),
+
+            hovermode="x unified",
+            template="plotly_white",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            )
+
+        st.plotly_chart(fig, use_container_width=True)
+        interpretation = st.text_area(
+            label= "Enter an interpretation", 
+            key = "interpretation_asset_sentiment_multiple", 
+        )
+
+        if st.button("Add to article", key = "export_assets_sentiment_plot"):
+            fig_for_export = go.Figure(fig)
+            fig_for_export.update_layout(annotations=[])
+
+            metrics = [
+               
+            ]
+            export = PlotExport(
+                title = title, 
+                figure_bytes=fig_for_export, 
+                metrics = metrics, 
+                interpretation= interpretation
+            )
+
+
+            st.session_state.export_data.append(export)
+            st.success("Added to article")
+
+               
+
+
+
+
+
+
+
+
 
 
 def is_article_german(article: dict) -> bool:
@@ -392,7 +533,7 @@ def plot_dates_vs_sentiments(df):
         st.success("Added to article")
 
 
-    
+
 
 
 

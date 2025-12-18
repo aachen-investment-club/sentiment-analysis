@@ -5,6 +5,20 @@ from utils import setup_path
 setup_path()
 from backend.aws_querying.DocumentData import list_articles
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def article_selection_progression_mode(): 
     articles = list_articles()
     selection = []
