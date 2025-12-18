@@ -14,3 +14,6 @@ yfinance
 # Visualization
 plotly
 kaleido
+
+# Language Detection
+langdetect
