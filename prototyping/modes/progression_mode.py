@@ -55,29 +55,32 @@ def render():
 
     # Analysis Step
     if st.toggle("start analysis"): 
-        st.header("Analysis Results")
-        
+
+
         with st.spinner("Running sentiment analysis..."):
             df = launch_sentiment_analysis_progression(
                 selected_articles, 
                 filters
             )
+
+
         
-        # Plot sentiment progression
-        plot_dates_vs_sentiments(df)
+        if st.toggle("draw sentiment plot") : 
+            # Plot sentiment progression
+            plot_dates_vs_sentiments(df)
         
-        # Show basic statistics
-        if df is not None:
-            avg_sentiment = df["average_sentiment"].mean()
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
-            with col2:
-                st.metric("Article Count", len(df["average_sentiment"]))
-            with col3:
-                sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
-                st.metric("Overall Sentiment", sentiment_label)
+            # Show basic statistics
+            if df is not None:
+                avg_sentiment = df["average_sentiment"].mean()
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
+                with col2:
+                    st.metric("Article Count", len(df["average_sentiment"]))
+                with col3:
+                    sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
+                    st.metric("Overall Sentiment", sentiment_label)
         
         st.divider()
         
@@ -92,18 +95,9 @@ def render():
             plot_sentiment_and_vix(df, vix)
             
             # Calculate and display correlation
-            corr = compute_sentiment_vix_correlation(list(df["dates"]), list(df["sentiments"]), vix)
-            
-            st.metric(
-                "Sentiment–VIX Correlation", 
-                f"{corr:.3f}",
-                help="Correlation between sentiment scores and VIX levels. Values range from -1 to 1."
-            )
-        if st.toggle("reset export data"): 
-            st.session_state.export_data = [] 
+        if st.button("reset export data"): 
+            st.session_state.export_data.clear()
           
-            
-            
         
         st.success("Analysis complete!")
 
