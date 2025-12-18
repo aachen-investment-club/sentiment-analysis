@@ -18,7 +18,7 @@ PROGRESSION_MODE_HEADER = "Sentiment progression over time mode"
 # UI Labels - Toggle Buttons (Compare Mode)
 # ============================================================================
 COMPARE_MODE_UPLOAD_TOGGLE = "upload document"
-COMPARE_MODE_SELECT_TOGGLE = "select documents"
+COMPARE_MODE_SELECT_TOGGLE = "select documents & start analysis"
 COMPARE_MODE_ANALYSIS_TOGGLE = "start analysis"
 COMPARE_MODE_EXPORT_TOGGLE = "export document"
 
@@ -38,7 +38,7 @@ PROGRESSION_MODE_EXPORT_TOGGLE = "export document"
 LABEL_SELECT_ANALYSIS_MODE = "Please select an analysis mode: "
 
 MSG_UPLOAD_DOCUMENT = "Document {index}:"
-MSG_SELECT_DOCUMENTS = "select documents to use"
+MSG_SELECT_DOCUMENTS = "select the starting date, then apply filters"
 MSG_ANALYSIS_STARTED = "analysis started"
 MSG_EXPORT_PDF = "download PDF"
 
@@ -61,9 +61,3 @@ MSG_ARTICLE_SAVED = "Article successfully saved!"
 # ============================================================================
 ERR_NO_TEXT = "Please enter article text before saving."
 ERR_NO_PDF = "Please upload a PDF file before saving."
-
-
-# ============================================================================
-# Demo text in export pdf
-# ============================================================================
-TEXT_INPUT = "Your advertisement could be here."
