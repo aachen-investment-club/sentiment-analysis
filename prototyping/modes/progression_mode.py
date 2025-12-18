@@ -1,10 +1,13 @@
 import streamlit as st
-from components.article_selector import article_selection_progression_mode, article_selection_lower_bound
-from components.article_selector import  article_selection_lower_bound_and_asset_filtering
+from components.article_selector import article_selection_progression_mode_filtered
 from components.article_upload import file_upload
-from backend.pdfoutput.pdf_creation import generate_pdf
-from components.sentiment_analysis_launcher import (launch_sentiment_analysis,
-    plot_dates_vs_sentiments, get_vix, plot_sentiment_and_vix, compute_sentiment_vix_correlation)
+from components.sentiment_analysis_launcher import (
+    launch_sentiment_analysis_progression,
+    plot_dates_vs_sentiments, 
+    get_vix, 
+    plot_sentiment_and_vix, 
+    compute_sentiment_vix_correlation
+)
 from config import constants as const
 
 
@@ -39,49 +42,77 @@ def render():
     st.divider()
 
     # Selection Step
-    if st.toggle(const.PROGRESSION_MODE_SELECT_TOGGLE): 
-
-        st.write(const.MSG_SELECT_DOCUMENTS)
-        #article_selection_progression_mode()
-
-        selected_articles= article_selection_lower_bound_and_asset_filtering()
-
+    st.subheader("Select Articles for Analysis")
+    st.write(const.MSG_SELECT_DOCUMENTS)
+    
+    # Article Selection for progression mode (starting date + optional multiple filters with intersection)
+    start_analysis, selected_articles, filters = article_selection_progression_mode_filtered()
 
     st.divider()
 
-
     # Analysis Step
-    if st.toggle(const.PROGRESSION_MODE_ANALYSIS_TOGGLE): 
-
-        st.write(const.MSG_ANALYSIS_STARTED)
-
-        if st.toggle("start the sentiment analysis"): 
-
-            dates, sentiments = launch_sentiment_analysis(selected_articles)
-            plot_dates_vs_sentiments(dates, sentiments)
-        if st.toggle("Include VIX"): 
-            vix=get_vix() 
-
+    if start_analysis and selected_articles:
+        st.header("Analysis Results")
+        
+        with st.spinner("Running sentiment analysis..."):
+            dates, sentiments = launch_sentiment_analysis_progression(
+                selected_articles, 
+                filters
+            )
+        
+        # Plot sentiment progression
+        plot_dates_vs_sentiments(dates, sentiments)
+        
+        # Show basic statistics
+        if sentiments:
+            avg_sentiment = sum(sentiments) / len(sentiments)
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
+            with col2:
+                st.metric("Article Count", len(sentiments))
+            with col3:
+                sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
+                st.metric("Overall Sentiment", sentiment_label)
+        
+        st.divider()
+        
+        # VIX Analysis (optional)
+        if st.toggle("Include VIX Analysis"): 
+            st.subheader("Market Volatility Comparison")
+            
+            with st.spinner("Fetching VIX data..."):
+                vix = get_vix()
+            
+            # Plot sentiment vs VIX
             plot_sentiment_and_vix(dates, sentiments, vix)
+            
+            # Calculate and display correlation
             corr = compute_sentiment_vix_correlation(dates, sentiments, vix)
-            st.metric("Sentiment–VIX correlation", f"{corr:.2f}")
-        if st.toggle("reset export data"): 
-            st.session_state.export_data = []
-
-
-
+            
+            st.metric(
+                "Sentiment–VIX Correlation", 
+                f"{corr:.3f}",
+                help="Correlation between sentiment scores and VIX levels. Values range from -1 to 1."
+            )
+            
+            # Interpretation
+            if abs(corr) < 0.3:
+                interpretation = "weak"
+            elif abs(corr) < 0.7:
+                interpretation = "moderate"
+            else:
+                interpretation = "strong"
+            
+            direction = "negative" if corr < 0 else "positive"
+            
+            st.info(f"There is a **{interpretation} {direction}** correlation between sentiment and VIX.")
+        
+        st.success("Analysis complete!")
 
     st.divider()
 
     # Export Step
     if st.toggle(const.PROGRESSION_MODE_EXPORT_TOGGLE): 
-
-        pdf_bytes = generate_pdf(st.session_state.export_data)
-        
-        st.download_button(
-            label="Download PDF",
-            data=pdf_bytes,
-            file_name="generated_report.pdf",
-            mime="application/pdf"
-        )
-            
+        st.write(const.MSG_EXPORT_PDF)

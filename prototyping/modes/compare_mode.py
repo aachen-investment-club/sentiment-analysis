@@ -1,10 +1,10 @@
 import streamlit as st
 from components.article_upload import file_upload
-from components.article_selector import  article_selection_lower_bound_and_asset_filtering
+from components.article_selector import article_selection_compare_mode
+from components.sentiment_analysis_launcher import launch_sentiment_analysis_comparison
 from config import constants as const
 
 def render(): 
-
     st.header(const.COMPARE_MODE_HEADER)
     
     # Upload Step
@@ -34,16 +34,25 @@ def render():
     st.divider()
 
     # Selection Step
-    if st.toggle(const.COMPARE_MODE_SELECT_TOGGLE):
-        st.write(const.MSG_SELECT_DOCUMENTS)
-        # Article Selection according to Compare mode
-        article_selection_lower_bound_and_asset_filtering()
+    st.subheader("Select Articles for Comparison")
+    st.write(const.MSG_SELECT_DOCUMENTS)
+    
+    # Article Selection according to Compare mode
+    start_analysis, selected_articles, filters = article_selection_compare_mode()
 
     st.divider()
 
     # Analysis Step
-    if st.toggle(const.COMPARE_MODE_ANALYSIS_TOGGLE): 
-        st.write(const.MSG_ANALYSIS_STARTED)
+    if start_analysis and selected_articles:
+        st.header("Analysis Results")
+        
+        # Check if any filters were selected
+        if not filters:
+            st.warning("No comparison filters selected. Please select at least one asset, market, or commodity to compare.")
+        else:
+            launch_sentiment_analysis_comparison(selected_articles, filters)
+            
+            st.success("Analysis complete!")
 
     st.divider()
 
