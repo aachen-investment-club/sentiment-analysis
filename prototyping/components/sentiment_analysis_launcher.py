@@ -5,6 +5,7 @@ from backend.aws_querying.DocumentData import (get_articles_s3,
                                                check_exists_article_sentiment_analysis, 
                                                add_article_sentiment_analysis )
 from tqdm import tqdm 
+from backend.pdfoutput.pdf_components import PlotExport
 from langdetect import detect, LangDetectException
 
 import calendar
@@ -345,19 +346,52 @@ def plot_dates_vs_sentiments(df):
         yaxis=dict(range=[-1, 1]),
         template="plotly_white"
     )
+
+    title = st.text_input("Enter a title for the analysis entry"
+                          , value = "Sentiment over time", key ="title_input_sentiment")
+
     st.plotly_chart(fig, use_container_width=True)
+
+
+    avg_sentiment = df["average_sentiment"].mean()
+    doc_count = len(df["average_sentiment"]) 
+    sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
+    with col2:
+        st.metric("Article Count", doc_count)
+    with col3:
+        st.metric("Overall Sentiment", sentiment_label)
+
+
     interpretation = st.text_area(
         label= "Enter an interpretation", 
         key = ""
     )
+
     if st.button("Add to article", key = "export_simple_plot"):
-        fig_for_export = go.Figure(fig)  # shallow copy
+        fig_for_export = go.Figure(fig)
         fig_for_export.update_layout(annotations=[])
-        data ={
-            "figure": fig_for_export, 
-            "interpretation": interpretation
-        }
-        st.session_state.export_data.append(data)
+
+        metrics = [
+            ("Avg Sentiment", f"{avg_sentiment:.2f}"),
+            ("Documents",str( doc_count)),
+            ("Overall", sentiment_label),
+        ]
+        export = PlotExport(
+            title = title, 
+            figure_bytes=fig_for_export, 
+            metrics = metrics, 
+            interpretation= interpretation
+        )
+
+
+        st.session_state.export_data.append(export)
+        st.success("Added to article")
+
+
     
 
 
@@ -413,6 +447,10 @@ def plot_sentiment_and_vix(sentiments, vix_data):
 
     fig.update_xaxes(title_text="Date")
 
+    title = st.text_input("Enter a title for the analysis entry"
+                          , value = "Sentiment and VIX over time", key ="title_input_vix_sentiment")
+
+
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -443,19 +481,25 @@ def plot_sentiment_and_vix(sentiments, vix_data):
     )
 
     if st.button("Add to article", key = "export_sentiment_and_vix"):
+
         fig_for_export = go.Figure(fig)
         fig_for_export.update_layout(annotations=[])
 
-        data = {
-            "figure": fig_for_export,
-            "interpretation": interpretation,
-            "correlation": corr,
-            "average_sentiment": avg_sentiment,
-            "document_count": doc_count,
-            "overall_sentiment": sentiment_label,
-        }
+        metrics = [
+            ("Correlation",  f"{corr:.2f}"), 
+            ("Avg Sentiment", f"{avg_sentiment:.2f}"),
+            ("Documents", str(doc_count)),
+            ("Overall", sentiment_label),
+        ]
+        export = PlotExport(
+            title = title, 
+            figure_bytes=fig_for_export, 
+            metrics = metrics, 
+            interpretation= interpretation
+        )
 
-        st.session_state.export_data.append(data)
+
+        st.session_state.export_data.append(export)
         st.success("Added to article")
 
 
