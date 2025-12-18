@@ -174,7 +174,7 @@ def launch_sentiment_analysis_progression(selected_articles: List, filters: Dict
     return df
 
 
-def launch_sentiment_analysis_comparison(selected_articles: List, filters: Dict):
+def launch_sentiment_analysis_comparison(selected_articles: List):
     """
     Analyzes sentiment for articles and creates separate charts for each filter category.
     For example, if filters={'assets': ['nvidia', 'bitcoin'], 'markets': ['US', 'EU']},
@@ -202,19 +202,136 @@ def launch_sentiment_analysis_comparison(selected_articles: List, filters: Dict)
     
     # Sort articles by date
     selected_articles.sort(key=lambda d: d["date"])
+
+    print("Are we at least here?")
+    return selected_articles
     
-    # Create separate charts for each filter category
+def plot_sentiments_comparison_mode(articles, filters):
+    
+    # Create separate LINE charts for each filter category
     if 'assets' in filters and filters['assets']:
-        st.subheader("Sentiment by Assets")
-        plot_sentiment_by_category(selected_articles, 'assets', filters['assets'])
+        st.subheader("Sentiment by Assets - Time Series")
+        plot_sentiment_by_category(articles, 'assets', filters['assets'])
     
     if 'markets' in filters and filters['markets']:
-        st.subheader("Sentiment by Markets")
-        plot_sentiment_by_category(selected_articles, 'markets', filters['markets'])
+        st.subheader("Sentiment by Markets - Time Series")
+        plot_sentiment_by_category(articles, 'markets', filters['markets'])
     
     if 'commodities' in filters and filters['commodities']:
-        st.subheader("Sentiment by Commodities")
-        plot_sentiment_by_category(selected_articles, 'commodities', filters['commodities'])
+        st.subheader("Sentiment by Commodities - Time Series")
+        plot_sentiment_by_category(articles, 'commodities', filters['commodities'])
+    
+    st.divider()
+    
+    # Create BAR charts for average sentiment comparison
+    if 'assets' in filters and filters['assets']:
+        st.subheader("Average Sentiment Comparison - Assets")
+        plot_sentiment_bar_chart(articles, 'assets', filters['assets'])
+    
+    if 'markets' in filters and filters['markets']:
+        st.subheader("Average Sentiment Comparison - Markets")
+        plot_sentiment_bar_chart(articles, 'markets', filters['markets'])
+    
+    if 'commodities' in filters and filters['commodities']:
+        st.subheader("Average Sentiment Comparison - Commodities")
+        plot_sentiment_bar_chart(articles, 'commodities', filters['commodities'])
+
+
+def plot_sentiment_bar_chart(articles: List, category: str, selected_items: List):
+    """
+    Creates a bar chart showing average sentiment for each item in the category.
+    
+    Args:
+        articles: List of articles with sentiment data
+        category: 'assets', 'markets', or 'commodities'
+        selected_items: List of specific items to plot (e.g., ['nvidia', 'bitcoin'])
+    """
+    
+    # Collect average sentiments for each item
+    item_data = []
+    
+    for item in selected_items:
+        # Filter articles that have this specific item
+        item_articles = [
+            article for article in articles 
+            if item in article.get(category, []) and "average_sentiment" in article
+        ]
+        
+        if not item_articles:
+            continue
+        
+        # Calculate average sentiment for this item
+        sentiments = [article["average_sentiment"] for article in item_articles]
+        avg_sentiment = sum(sentiments) / len(sentiments)
+        article_count = len(item_articles)
+        
+        item_data.append({
+            'item': item,
+            'avg_sentiment': avg_sentiment,
+            'count': article_count
+        })
+    
+    if not item_data:
+        st.warning(f"No data available for {category}")
+        return
+    
+    # Sort by average sentiment (descending)
+    item_data.sort(key=lambda x: x['avg_sentiment'], reverse=True)
+    
+    # Create bar chart
+    fig = go.Figure()
+    
+    # Determine colors based on sentiment (green for positive, red for negative)
+    colors = ['green' if x['avg_sentiment'] > 0 else 'red' if x['avg_sentiment'] < 0 else 'gray' 
+              for x in item_data]
+    
+    fig.add_trace(
+        go.Bar(
+            x=[x['item'] for x in item_data],
+            y=[x['avg_sentiment'] for x in item_data],
+            marker_color=colors,
+            text=[f"{x['avg_sentiment']:.3f}" for x in item_data],
+            textposition='outside',
+            hovertemplate=(
+                "<b>%{x}</b><br>" +
+                "Avg Sentiment: %{y:.3f}<br>" +
+                "Article Count: %{customdata}<br>" +
+                "<extra></extra>"
+            ),
+            customdata=[x['count'] for x in item_data]
+        )
+    )
+    
+    # Update layout
+    fig.update_layout(
+        title=f"Average Sentiment - {category.capitalize()}",
+        xaxis_title=category.capitalize(),
+        yaxis_title="Average Sentiment Score",
+        yaxis=dict(range=[-1, 1]),
+        template="plotly_white",
+        showlegend=False
+    )
+    
+    # Add a horizontal line at y=0 for neutral sentiment
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Show detailed statistics table
+    st.write(f"**Detailed Statistics for {category.capitalize()}:**")
+    
+    # Create a DataFrame for display
+    stats_df = pd.DataFrame([
+        {
+            category.capitalize(): x['item'],
+            'Avg Sentiment': f"{x['avg_sentiment']:.3f}",
+            'Article Count': x['count'],
+            'Label': 'Positive' if x['avg_sentiment'] > 0 else 'Negative' if x['avg_sentiment'] < 0 else 'Neutral'
+        }
+        for x in item_data
+    ])
+    
+    st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
 
 def plot_sentiment_by_category(articles: List, category: str, selected_items: List):
