@@ -268,46 +268,72 @@ def article_selection_lower_bound_and_asset_filtering():
             continue
     
     # Display selected filters and count
-    st.info(f"Filtering: articles staring from {selected_month} in year {selected_year}")
+
+    st.info(f"Filtering: articles starting from {selected_month} in year {selected_year}")
     st.success(f"Found {len(filtered_articles)} articles")
+
+    # Select-all toggle (AFTER filtering)
+    select_all = st.toggle("Select all filtered articles", key="select_all_articles")
+
+
     
     # Article selection UI
     selection = []
-    for article in filtered_articles: 
-        with st.container(border=True): 
+
+
+    selection = []
+
+    for idx, article in enumerate(filtered_articles):
+        article_key = f"article_select_{idx}"
+
+        # Initialize checkbox state based on select_all
+        if article_key not in st.session_state:
+            st.session_state[article_key] = select_all
+        elif select_all:
+            st.session_state[article_key] = True
+        elif not select_all:
+            st.session_state[article_key] = False
+
+        with st.container(border=True):
             col1, col2 = st.columns([0.9, 0.1])
-            checked = col2.checkbox("", key=article)
-            
-            with col1: 
+
+            checked = col2.checkbox(
+                "",
+                key=article_key
+            )
+
+            with col1:
                 st.markdown(f"**{article['title']}**")
                 st.markdown(f"Date: {article['date']}")
                 st.markdown(f"Source: {article['source']}")
 
                 asset_tags = " ".join(
                     [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["assets"]]
+                    for a in article["assets"]]
                 )
                 st.markdown(f"**Article assets:** {asset_tags}", unsafe_allow_html=True)
 
                 commodities_tags = " ".join(
                     [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["commodities"]]
+                    for a in article["commodities"]]
                 )
                 st.markdown(f"**Article commodities:** {commodities_tags}", unsafe_allow_html=True)
 
                 markets_tags = " ".join(
                     [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["markets"]]
+                    for a in article["markets"]]
                 )
                 st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
 
-            if checked: 
+            if checked:
                 selection.append(article)
 
-    if st.toggle("Commit selection"): 
-        st.write(f"Selected articles: {selection}")
-        return selection
+
     
+    if st.toggle("Commit selection"):
+        st.write(f"Selected articles: {len(selection)}")
+        return selection
+
     return []
 
 
