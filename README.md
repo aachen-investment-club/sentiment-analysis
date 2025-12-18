@@ -16,7 +16,7 @@ This repository focuses on integrating the FinBERT model for sentiment analysis 
 ```
 sentiment-analysis/
 ├── backend/          # FastAPI backend (coming soon)
-├── frontend/         # Next.js frontend (coming soon)
+├── frontend/         # Next.js frontend (TypeScript + Tailwind CSS)
 ├── src/              # Source code for FinBERT integration
 ├── requirements.txt  # Python dependencies
 └── README.md         # This file
@@ -80,7 +80,43 @@ python src/finbert_sentiment.py
 ## Backend (FastAPI) - Coming Soon
 
 The FastAPI backend will provide REST endpoints for serving model predictions.
+## Frontend Setup (Next.js)
 
-## Frontend (Next.js) - Coming Soon
+The frontend uses **pnpm** as the package manager for better performance and disk efficiency.
 
-The Next.js frontend will provide interactive visualizations for sentiment analysis results.
+### Prerequisites
+
+- **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
+- **pnpm** - Install globally with: `npm install -g pnpm`
+
+### Setup and Running
+
+1. Navigate to the frontend directory:
+```sh
+cd frontend
+```
+
+2. Install dependencies:
+```sh
+pnpm install
+```
+
+3. Run the development server:
+```sh
+pnpm dev
+```
+
+The frontend will be available at [http://localhost:3000](http://localhost:3000)
+
+### Available Scripts
+
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+
+### Troubleshooting
+
+- **Port 3000 already in use?** The dev server will automatically try the next available port (3001, 3002, etc.)
+- **pnpm command not found?** Make sure Node.js is installed and pnpm is installed globally: `npm install -g pnpm`
+- **Dependencies not installing?** Try deleting `node_modules` and `pnpm-lock.yaml`, then run `pnpm install` again

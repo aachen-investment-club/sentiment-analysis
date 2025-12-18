@@ -1,0 +1,19 @@
+# Streamlit Framework
+streamlit 
+
+# Environment Variables
+python-dotenv
+
+# AWS SDK (for DynamoDB operations)
+boto3
+
+# Data Utilities
+pandas
+yfinance
+
+# Visualization
+plotly
+kaleido
+
+# Language Detection
+langdetect
