@@ -7,9 +7,22 @@ MODE_NONE = None
 
 
 # ============================================================================
+# Navigation Constants
+# ============================================================================
+NAV_HOME = "Home"
+NAV_MODES_SECTION = "Modes"
+NAV_PROGRESSION = "Sentiment over time mode"
+NAV_COMPARISON = "Asset sentiment comparison mode"
+
+# ============================================================================
 # UI Headers - Mode Titles
 # ============================================================================
 WELCOME_HEADER = "Welcome to AIC's sentiment analyser"
+HOME_PAGE_HEADER = "AIC Sentiment Analyzer"
+HOME_PAGE_DESCRIPTION = """
+This application provides advanced sentiment analysis for financial documents using FinBERT models. 
+Select a mode from the sidebar to begin your analysis.
+"""
 COMPARE_MODE_HEADER = "Asset sentiment comparison mode"
 PROGRESSION_MODE_HEADER = "Sentiment progression over time mode"
 
