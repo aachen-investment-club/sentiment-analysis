@@ -9,3 +9,8 @@ boto3
 
 # Data Utilities
 pandas
+yfinance
+
+# Visualization
+plotly
+kaleido
