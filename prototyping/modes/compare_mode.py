@@ -1,7 +1,7 @@
 import streamlit as st
 from components.article_upload import file_upload
 from components.article_selector import article_selection_compare_mode
-from components.sentiment_analysis_launcher import launch_sentiment_analysis_comparison
+from components.sentiment_analysis_launcher import launch_sentiment_analysis_comparison, plot_sentiments_comparison_mode
 from config import constants as const
 from backend.pdfoutput.pdf_creation import generate_pdf
 
@@ -51,9 +51,26 @@ def render():
         if not filters:
             st.warning("No comparison filters selected. Please select at least one asset, market, or commodity to compare.")
         else:
-            launch_sentiment_analysis_comparison(selected_articles, filters)
+            articles = launch_sentiment_analysis_comparison(selected_articles)
             
-            st.success("Analysis complete!")
+            # Store in session state!
+            st.session_state.articles = articles
+            st.session_state.filters = filters
+        
+        st.success("Analysis complete!")
+
+    # Now check session state instead
+    if 'articles' in st.session_state and 'filters' in st.session_state:
+        if st.toggle("draw sentiment plots"):
+            plot_sentiments_comparison_mode(
+                articles=st.session_state.articles, 
+                filters=st.session_state.filters
+            )
+
+        if st.button("reset export data"): 
+                st.session_state.export_data.clear()
+            
+       
 
     st.divider()
 
