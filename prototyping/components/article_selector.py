@@ -190,6 +190,11 @@ def article_selection_compare_mode() -> Tuple[bool, List, Dict]:
     # Display info
     st.info(f"Date range: {start_month}/{start_year} to {end_month}/{end_year}")
     st.success(f"Found {len(filtered_articles)} articles")
+
+    # Select-all toggle (AFTER filtering)
+    select_all = st.toggle("Select all filtered articles", key="select_all_articles")
+
+
     
     if filters:
         st.write("**Active filters:**")
@@ -357,13 +362,13 @@ def article_selection_progression_mode_filtered() -> Tuple[bool, List, Dict]:
     st.success(f"Found {len(filtered_articles)} articles")
     
     # Start analysis button
-    if st.button("Start Analysis", type="primary", key="prog_start_btn"):
+    if st.toggle("Commit selection", key="prog_start_btn"):
         if not filtered_articles:
             st.error("No articles found with the selected criteria!")
-            return False, [], {}
-        return True, filtered_articles, filters
+            return  [], {}
+        return filtered_articles, filters
     
-    return False, [], {}
+    return [], {}
 
 def article_selection_lower_bound(): 
     articles = list_articles()
