@@ -6,9 +6,10 @@ import pandas as pd
 from backend.config import constants as const
 
 def get_asset(asset: const.Asset,start_date: dte,  granularity:const.Granularity = const.Granularity.MONTH_GRANULARITY): 
+    ticker = get_ticker_from_company_name(asset)
 
     output = yf.download(
-        asset, 
+        ticker, 
         interval = "1d", 
         start = start_date
         ) 
@@ -19,4 +20,7 @@ def get_asset(asset: const.Asset,start_date: dte,  granularity:const.Granularity
     return output["Close"].resample("M").mean()
 
 
-
+def get_ticker_from_company_name(asset: str):
+    search = yf.Search(asset)
+    results = search.quotes
+    return results[0]["symbol"]
