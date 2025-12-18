@@ -8,19 +8,107 @@ import io
 
 
 
+class TemplatePDF(FPDF):
+
+    def header(self):
+        # ---- Colors ----
+        self.set_draw_color(10, 44, 95)  # dark blue
+        self.set_line_width(2)
+
+        # ---- Page border ----
+        margin = 10
+        self.rect(
+            margin,
+            margin,
+            self.w - 2 * margin,
+            self.h - 2 * margin
+        )
+
+        # ---- Logo ----
+        self.image("./static/aic_logo.png", x=(self.w - 60) / 2, y=15, w=60)
+
+        # ---- Move cursor below logo ----
+        self.ln(35)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", size=8)
+        self.cell(0, 10, str(self.page_no()), align="R")
+
+def generate_pdf(data: list) -> bytes:
+    pdf = TemplatePDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    BORDER = 10
+    INNER_PADDING = 5
+
+    safe_x = BORDER + INNER_PADDING
+    safe_width = pdf.w - 2 * safe_x
+
+    img_width = safe_width * 0.7
+    # ---- Content ----
+    for component in data:
+        fig = component["figure"]
+        interpretation = component["interpretation"]
+
+        if fig.data:
+            img_bytes = fig.to_image(format="png", scale=2)
+            img_stream = io.BytesIO(img_bytes)
+            img_x = safe_x + (safe_width - img_width) / 2
+
+            pdf.image(img_stream, x=img_x, w=img_width)
+            pdf.ln(4)
+        
+        if "correlation" in component and "average_sentiment" in component and "document_count" in component and "overall_sentiment" in component: 
+            draw_metrics_row(pdf, component, safe_x, safe_width)
 
 
+        pdf.set_font("Arial", size=11)
+        pdf.set_x(safe_x)
 
+        pdf.multi_cell(safe_width, 7, interpretation)
+        pdf.ln(10)
+
+    return bytes(pdf.output(dest="S"))
+
+def draw_metrics_row(pdf, component, safe_x, safe_width):
+    metrics = [
+        ("Correlation", f"{component['correlation']:.2f}"),
+        ("Avg Sentiment", f"{component['average_sentiment']:.2f}"),
+        ("Documents", str(component['document_count'])),
+        ("Overall", component['overall_sentiment']),
+    ]
+
+    col_count = len(metrics)
+    col_width = safe_width / col_count
+
+    start_y = pdf.get_y()
+
+    # Labels
+    pdf.set_font("Arial", size=9)
+    for i, (label, _) in enumerate(metrics):
+        x = safe_x + i * col_width
+        pdf.set_xy(x, start_y)
+        pdf.cell(col_width, 6, label, align="C")
+
+    # Values
+    pdf.set_font("Arial", "B", 11)
+    for i, (_, value) in enumerate(metrics):
+        x = safe_x + i * col_width
+        pdf.set_xy(x, start_y + 6)
+        pdf.cell(col_width, 8, value, align="C")
+
+    # Move cursor below the metrics row
+    pdf.set_y(start_y + 16)
+
+"""
 
 
 
 def generate_pdf(
         data: List
 ) -> bytes:
-    """
-    Generates a simple PDF document from a dictionary.
-    Returns the PDF data as bytes.
-    """
     pdf = FPDF()
     pdf.add_page()
     
@@ -54,3 +142,4 @@ def generate_pdf(
     # Output the PDF as a byte string in memory
     pdf_output = pdf.output(dest="S")
     return bytes(pdf_output) 
+"""
