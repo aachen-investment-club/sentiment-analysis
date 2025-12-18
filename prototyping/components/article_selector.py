@@ -1,11 +1,11 @@
 import streamlit as st
 from datetime import datetime
+from typing import Dict, List, Tuple
 from utils import setup_path
 setup_path()
 from backend.aws_querying.DocumentData import list_articles
 
 def article_selection_progression_mode(): 
-
     articles = list_articles()
     selection = []
     for article in articles: 
@@ -23,21 +23,17 @@ def article_selection_progression_mode():
             )
             st.markdown(f"**Article assets:** {asset_tags}", unsafe_allow_html=True)
 
-
             commodities_tags = " ".join(
                 [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
                  for a in article["commodities"]]
             )
             st.markdown(f"**Article commodities:** {commodities_tags}", unsafe_allow_html=True)
 
-
             markets_tags= " ".join(
                 [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
                  for a in article["markets"]]
             )
             st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
-
-
 
         if checked: 
             selection.append(article)
@@ -47,129 +43,23 @@ def article_selection_progression_mode():
         return selection
     
     return []
-    
-    # TODO: the part where the documents are fetched for analysis should be executed when 
-    # the analysis is started 
 
-def article_selection_compare_mode(): 
-    # Fetch all articles first
+def article_selection_compare_mode() -> Tuple[bool, List, Dict]:
+    """
+    Returns: (start_analysis: bool, filtered_articles: List, filters: Dict)
+    """
     articles = list_articles()
     
-    # Extract available years and months from the data
-    available_years = set()
-    available_months = set()
-    
-    for article in articles:
-        try:
-            article_date = datetime.strptime(article['date'], '%Y-%m-%d')  # Adjust format as needed
-            available_years.add(article_date.year)
-            available_months.add(article_date.month)
-        except (ValueError, KeyError):
-            continue
-    
-    # Convert to sorted lists
-    available_years = sorted(list(available_years), reverse=True)  # Most recent first
-    available_months = sorted(list(available_months))  # January to December
-    
-    # Date range filter section
-    st.subheader("Filter by Date")
-    
-    if not available_years or not available_months:
-        st.warning("No articles with valid dates found.")
-        return []
-    
-    # Multi-select for years and months (only showing available ones)
-    selected_years = st.multiselect(
-        "Select Year(s)",
-        options=available_years,
-        default=[]
-    )
-    
-    selected_months = st.multiselect(
-        "Select Month(s)",
-        options=available_months,
-        format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
-        default=[]
-    )
-    
-    # Validation
-    if not selected_years or not selected_months:
-        st.warning("Please select at least one year and one month to filter articles.")
-        return []
-    
-    # Filter articles by selected years and months
-    filtered_articles = []
-    for article in articles:
-        try:
-            article_date = datetime.strptime(article['date'], '%Y-%m-%d')  # Adjust format as needed
-            
-            if article_date.year in selected_years and article_date.month in selected_months:
-                filtered_articles.append(article)
-        except (ValueError, KeyError):
-            continue
-    
-    # Display selected filters and count
-    years_str = ", ".join(map(str, sorted(selected_years)))
-    months_str = ", ".join([datetime(2000, m, 1).strftime('%B') for m in sorted(selected_months)])
-    st.info(f"Filtering: {months_str} in years {years_str}")
-    st.success(f"Found {len(filtered_articles)} articles")
-    
-    # Article selection UI
-    selection = []
-    for article in filtered_articles: 
-        with st.container(border=True): 
-            col1, col2 = st.columns([0.9, 0.1])
-            checked = col2.checkbox("", key=article)
-            
-            with col1: 
-                st.markdown(f"**{article['title']}**")
-                st.markdown(f"Date: {article['date']}")
-                st.markdown(f"Source: {article['source']}")
-
-                asset_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["assets"]]
-                )
-                st.markdown(f"**Article assets:** {asset_tags}", unsafe_allow_html=True)
-
-                commodities_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["commodities"]]
-                )
-                st.markdown(f"**Article commodities:** {commodities_tags}", unsafe_allow_html=True)
-
-                markets_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["markets"]]
-                )
-                st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
-
-            if checked: 
-                selection.append(article)
-
-    if st.toggle("Commit selection"): 
-        st.write(f"Selected articles: {selection}")
-        return selection
-    
-    return []
-
-
-
-
-def article_selection_lower_bound_and_asset_filtering(): 
-    # Fetch all articles first
-    articles = list_articles()
-    
-    # Extract available years and months from the data
+    # Collect available options
     available_years = set()
     available_months = set()
     available_assets = set()
-    available_markets= set()
-    available_commodities= set()
+    available_markets = set()
+    available_commodities = set()
     
     for article in articles:
         try:
-            article_date = datetime.strptime(article['date'], '%Y-%m-%d')  # Adjust format as needed
+            article_date = datetime.strptime(article['date'], '%Y-%m-%d')
             available_years.add(article_date.year)
             available_months.add(article_date.month)
             available_assets = available_assets.union(set(article["assets"]))
@@ -178,220 +68,326 @@ def article_selection_lower_bound_and_asset_filtering():
         except (ValueError, KeyError):
             continue
     
-    # Convert to sorted lists
-    available_years = sorted(list(available_years), reverse=True)  # Most recent first
-    available_months = sorted(list(available_months))  # January to December
-    available_assets = list(available_assets)
-    available_markets= list(available_markets)
-    available_commodities = list(available_commodities)
+    available_years = sorted(list(available_years), reverse=True)
+    available_months = sorted(list(available_months))
+    available_assets = sorted(list(available_assets))
+    available_markets = sorted(list(available_markets))
+    available_commodities = sorted(list(available_commodities))
     
-    # Date range filter section
-    st.subheader("Filter by Date")
+    # Date Range Selection
+    st.subheader("Select Date Range")
     
     if not available_years or not available_months:
         st.warning("No articles with valid dates found.")
-        return []
-
-
-
-
-
-
+        return False, [], {}
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Start Date**")
+        start_year = st.selectbox(
+            "Year",
+            options=available_years,
+            key="start_year"
+        )
+        start_month = st.selectbox(
+            "Month",
+            options=available_months,
+            format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
+            key="start_month"
+        )
+    
+    with col2:
+        st.markdown("**End Date**")
+        end_year = st.selectbox(
+            "Year",
+            options=available_years,
+            key="end_year"
+        )
+        end_month = st.selectbox(
+            "Month",
+            options=available_months,
+            format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
+            key="end_month"
+        )
+    
+    # Filter Selection
+    st.subheader("Select Filters (optional)")
+    
+    filters = {}
+    
     selected_assets = st.multiselect(
-        "Select assets",
+        "Select assets to compare",
         options=available_assets,
     )
-    selected_markets= st.multiselect(
-        "Select markets",
+    if selected_assets:
+        filters['assets'] = selected_assets
+    
+    selected_markets = st.multiselect(
+        "Select markets to compare",
         options=available_markets,
     )
-
-    selected_commodities= st.multiselect(
-        "Select commodities",
+    if selected_markets:
+        filters['markets'] = selected_markets
+    
+    selected_commodities = st.multiselect(
+        "Select commodities to compare",
         options=available_commodities,
     )
-
+    if selected_commodities:
+        filters['commodities'] = selected_commodities
     
-    # Multi-select for years and months (only showing available ones)
-    selected_year = st.selectbox(
-        "Select Starting Year",
-        options=available_years,
-    )
+    # Validate date range
+    start_date = datetime(start_year, start_month, 1)
+    end_date = datetime(end_year, end_month, 1)
     
-    selected_month = st.selectbox(
-        "Select Starting Month",
-        options=available_months,
-        format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
-    )
+    if start_date > end_date:
+        st.error("Start date must be before or equal to end date!")
+        return False, [], {}
     
-    st.session_state.lower_bound_year = selected_year 
-    st.session_state.lower_bound_month= selected_month
-
-
-
-    # Validation
-    if not selected_year or not selected_month:
-        st.warning("Please select at least one year and one month to filter articles.")
-        return []
-    
-    # Filter articles by selected years and months
-    
-    lower_bound = datetime(selected_year, selected_month, 1)
-
+    # Filter articles by date range and tags
     filtered_articles = []
-
-    selected_assets = set(selected_assets)
-    selected_markets = set(selected_markets)
-    selected_commodities = set(selected_commodities)
+    filtered_titles_set = set()
+    
+    selected_assets_set = set(selected_assets)
+    selected_markets_set = set(selected_markets)
+    selected_commodities_set = set(selected_commodities)
+    
+    # If no filters selected, get all articles in date range
+    any_filter_selected = selected_assets or selected_markets or selected_commodities
+    
     for article in articles:
         try:
-            article_date = datetime.strptime(article['date'], '%Y-%m-%d')  
-            article_markets = set(article["markets"])
-            article_assets= set(article["assets"])
-            article_commodities= set(article["commodities"])
-
-            any_label_selected = (
-                selected_assets or selected_markets or selected_commodities
-            )
-
-            label_expression = (
-                not any_label_selected or
-                (not article_markets.isdisjoint(selected_markets)) or
-                (not article_assets.isdisjoint(selected_assets)) or
-                (not article_commodities.isdisjoint(selected_commodities))
-            )
-
-            if article_date >= lower_bound and (label_expression):
+            article_date = datetime.strptime(article['date'], '%Y-%m-%d')
+            
+            # Check date range
+            if not (start_date <= article_date <= end_date):
+                continue
+            
+            # Check filters if any are selected
+            if any_filter_selected:
+                article_assets = set(article.get("assets", []))
+                article_markets = set(article.get("markets", []))
+                article_commodities = set(article.get("commodities", []))
+                
+                has_matching_tag = (
+                    (not article_assets.isdisjoint(selected_assets_set)) or
+                    (not article_markets.isdisjoint(selected_markets_set)) or
+                    (not article_commodities.isdisjoint(selected_commodities_set))
+                )
+                
+                if not has_matching_tag:
+                    continue
+            
+            # Add article (avoid duplicates by title)
+            if article["title"] not in filtered_titles_set:
                 filtered_articles.append(article)
-
+                filtered_titles_set.add(article["title"])
+                
         except (ValueError, KeyError):
             continue
     
-    # Display selected filters and count
-    st.info(f"Filtering: articles staring from {selected_month} in year {selected_year}")
+    # Display info
+    st.info(f"Date range: {start_month}/{start_year} to {end_month}/{end_year}")
     st.success(f"Found {len(filtered_articles)} articles")
     
-    # Initialize session state for selected articles
-    if "selected_article_keys" not in st.session_state:
-        st.session_state.selected_article_keys = set()
+    if filters:
+        st.write("**Active filters:**")
+        if 'assets' in filters:
+            st.write(f"- Assets: {', '.join(filters['assets'])}")
+        if 'markets' in filters:
+            st.write(f"- Markets: {', '.join(filters['markets'])}")
+        if 'commodities' in filters:
+            st.write(f"- Commodities: {', '.join(filters['commodities'])}")
     
-    # Create a unique key for each article using DocumentID
-    def get_article_key(article):
-        return article.get('DocumentID', f"{article.get('title', '')}_{article.get('date', '')}")
+    # Start analysis button
+    if st.button("Start Analysis", type="primary"):
+        if not filtered_articles:
+            st.error("No articles found with the selected criteria!")
+            return False, [], {}
+        return True, filtered_articles, filters
     
-    # Store filtered articles in session state for select all functionality
-    filtered_article_keys = [get_article_key(article) for article in filtered_articles]
-    
-    # Select All and Reset Selection buttons
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button("Select All", use_container_width=True):
-            st.session_state.selected_article_keys = set(filtered_article_keys)
-            # Also set individual checkbox states
-            for key in filtered_article_keys:
-                st.session_state[f"checkbox_{key}"] = True
-            st.rerun()
-    with col_btn2:
-        if st.button("Reset Selection", use_container_width=True):
-            st.session_state.selected_article_keys = set()
-            # Also clear individual checkbox states
-            for key in filtered_article_keys:
-                st.session_state[f"checkbox_{key}"] = False
-            st.rerun()
-    
-    # Article selection UI
-    selection = []
-    for article in filtered_articles: 
-        article_key = get_article_key(article)
-        is_selected = article_key in st.session_state.selected_article_keys
-        
-        with st.container(border=True): 
-            col1, col2 = st.columns([0.9, 0.1])
-            # Use article_key as checkbox key - Streamlit will maintain state through this key
-            checkbox_state_key = f"checkbox_{article_key}"
-            
-            # Initialize checkbox state if it doesn't exist, otherwise respect existing state
-            # but update it if the article should be selected (e.g., from Select All button)
-            if checkbox_state_key not in st.session_state:
-                st.session_state[checkbox_state_key] = is_selected
-            elif is_selected:
-                # Ensure checkbox reflects that article should be selected
-                st.session_state[checkbox_state_key] = True
-            
-            checked = col2.checkbox("", key=checkbox_state_key)
-            
-            # Sync session state with checkbox state
-            if checked:
-                st.session_state.selected_article_keys.add(article_key)
-            else:
-                st.session_state.selected_article_keys.discard(article_key)
-            
-            with col1: 
-                st.markdown(f"**{article['title']}**")
-                st.markdown(f"Date: {article['date']}")
-                st.markdown(f"Source: {article['source']}")
+    return False, [], {}
 
-                asset_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["assets"]]
-                )
-                st.markdown(f"**Article assets:** {asset_tags}", unsafe_allow_html=True)
-
-                commodities_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["commodities"]]
-                )
-                st.markdown(f"**Article commodities:** {commodities_tags}", unsafe_allow_html=True)
-
-                markets_tags = " ".join(
-                    [f"<span style='background-color:green;padding:4px 10px;border-radius:10px;margin-right:5px;'>{a}</span>"
-                     for a in article["markets"]]
-                )
-                st.markdown(f"**Article markets:** {markets_tags}", unsafe_allow_html=True)
-
-            if checked: 
-                selection.append(article)
-
-    if st.toggle("Commit selection"): 
-        st.write(f"Selected articles: {selection}")
-        return selection
-    
-    return []
-
-
-
-
-
-
-
-def article_selection_lower_bound(): 
-    # Fetch all articles first
+def article_selection_progression_mode_filtered() -> Tuple[bool, List, Dict]:
+    """
+    Progression mode: Starting date + optional multiple filters with INTERSECTION logic
+    Articles must match ALL selected filter categories (if selected)
+    Returns: (start_analysis: bool, filtered_articles: List, filters: Dict)
+    """
     articles = list_articles()
     
-    # Extract available years and months from the data
+    # Collect available options
+    available_years = set()
+    available_months = set()
+    available_assets = set()
+    available_markets = set()
+    available_commodities = set()
+    
+    for article in articles:
+        try:
+            article_date = datetime.strptime(article['date'], '%Y-%m-%d')
+            available_years.add(article_date.year)
+            available_months.add(article_date.month)
+            available_assets = available_assets.union(set(article["assets"]))
+            available_markets = available_markets.union(set(article["markets"]))
+            available_commodities = available_commodities.union(set(article["commodities"]))
+        except (ValueError, KeyError):
+            continue
+    
+    available_years = sorted(list(available_years), reverse=True)
+    available_months = sorted(list(available_months))
+    available_assets = sorted(list(available_assets))
+    available_markets = sorted(list(available_markets))
+    available_commodities = sorted(list(available_commodities))
+    
+    # Starting Date Selection
+    st.subheader("Select Starting Date")
+    
+    if not available_years or not available_months:
+        st.warning("No articles with valid dates found.")
+        return False, [], {}
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        start_year = st.selectbox(
+            "Starting Year",
+            options=available_years,
+            key="prog_start_year"
+        )
+    
+    with col2:
+        start_month = st.selectbox(
+            "Starting Month",
+            options=available_months,
+            format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
+            key="prog_start_month"
+        )
+    
+    # Store in session state for VIX
+    st.session_state.lower_bound_year = start_year
+    st.session_state.lower_bound_month = start_month
+    
+    # Optional Filter Selection (multiple with intersection)
+    st.subheader("Select Filters (optional)")
+    st.info("Articles must match ALL selected filter categories. Within each category, an article matches if it has ANY of the selected values.")
+    
+    filters = {}
+    
+    selected_assets = st.multiselect(
+        "Select assets (optional)",
+        options=available_assets,
+        key="prog_assets"
+    )
+    if selected_assets:
+        filters['assets'] = selected_assets
+    
+    selected_markets = st.multiselect(
+        "Select markets (optional)",
+        options=available_markets,
+        key="prog_markets"
+    )
+    if selected_markets:
+        filters['markets'] = selected_markets
+    
+    selected_commodities = st.multiselect(
+        "Select commodities (optional)",
+        options=available_commodities,
+        key="prog_commodities"
+    )
+    if selected_commodities:
+        filters['commodities'] = selected_commodities
+    
+    # Filter articles with INTERSECTION logic
+    start_date = datetime(start_year, start_month, 1)
+    
+    filtered_articles = []
+    filtered_titles_set = set()
+    
+    selected_assets_set = set(selected_assets)
+    selected_markets_set = set(selected_markets)
+    selected_commodities_set = set(selected_commodities)
+    
+    for article in articles:
+        try:
+            article_date = datetime.strptime(article['date'], '%Y-%m-%d')
+            
+            # Check date range
+            if article_date < start_date:
+                continue
+            
+            # INTERSECTION logic: article must match ALL selected filter categories
+            article_assets = set(article.get("assets", []))
+            article_markets = set(article.get("markets", []))
+            article_commodities = set(article.get("commodities", []))
+            
+            # If assets filter is selected, article must have at least one of the selected assets
+            if selected_assets_set and article_assets.isdisjoint(selected_assets_set):
+                continue
+            
+            # If markets filter is selected, article must have at least one of the selected markets
+            if selected_markets_set and article_markets.isdisjoint(selected_markets_set):
+                continue
+            
+            # If commodities filter is selected, article must have at least one of the selected commodities
+            if selected_commodities_set and article_commodities.isdisjoint(selected_commodities_set):
+                continue
+            
+            # Add article (avoid duplicates by title)
+            if article["title"] not in filtered_titles_set:
+                filtered_articles.append(article)
+                filtered_titles_set.add(article["title"])
+                
+        except (ValueError, KeyError):
+            continue
+    
+    # Display info
+    st.info(f"Articles starting from {start_month}/{start_year}")
+    
+    if filters:
+        st.write("**Active filters (ALL must match):**")
+        if 'assets' in filters:
+            st.write(f"- Assets: {', '.join(filters['assets'])} (article must have at least one)")
+        if 'markets' in filters:
+            st.write(f"- Markets: {', '.join(filters['markets'])} (article must have at least one)")
+        if 'commodities' in filters:
+            st.write(f"- Commodities: {', '.join(filters['commodities'])} (article must have at least one)")
+    
+    st.success(f"Found {len(filtered_articles)} articles")
+    
+    # Start analysis button
+    if st.button("Start Analysis", type="primary", key="prog_start_btn"):
+        if not filtered_articles:
+            st.error("No articles found with the selected criteria!")
+            return False, [], {}
+        return True, filtered_articles, filters
+    
+    return False, [], {}
+
+def article_selection_lower_bound(): 
+    articles = list_articles()
+    
     available_years = set()
     available_months = set()
     
     for article in articles:
         try:
-            article_date = datetime.strptime(article['date'], '%Y-%m-%d')  # Adjust format as needed
+            article_date = datetime.strptime(article['date'], '%Y-%m-%d')
             available_years.add(article_date.year)
             available_months.add(article_date.month)
         except (ValueError, KeyError):
             continue
     
-    # Convert to sorted lists
-    available_years = sorted(list(available_years), reverse=True)  # Most recent first
-    available_months = sorted(list(available_months))  # January to December
+    available_years = sorted(list(available_years), reverse=True)
+    available_months = sorted(list(available_months))
     
-    # Date range filter section
     st.subheader("Filter by Date")
     
     if not available_years or not available_months:
         st.warning("No articles with valid dates found.")
         return []
     
-    # Multi-select for years and months (only showing available ones)
     selected_year = st.selectbox(
         "Select Starting Year",
         options=available_years,
@@ -402,14 +398,11 @@ def article_selection_lower_bound():
         format_func=lambda x: datetime(2000, x, 1).strftime('%B'),
     )
     st.session_state.lower_bound_year = selected_year 
-    st.session_state.lower_bound_month= selected_month
+    st.session_state.lower_bound_month = selected_month
     
-    # Validation
     if not selected_year or not selected_month:
         st.warning("Please select at least one year and one month to filter articles.")
         return []
-    
-    # Filter articles by selected years and months
     
     lower_bound = datetime(selected_year, selected_month, 1)
 
@@ -424,11 +417,9 @@ def article_selection_lower_bound():
         except (ValueError, KeyError):
             continue
     
-    # Display selected filters and count
-    st.info(f"Filtering: articles staring from {selected_month} in year {selected_year}")
+    st.info(f"Filtering: articles starting from {selected_month} in year {selected_year}")
     st.success(f"Found {len(filtered_articles)} articles")
     
-    # Article selection UI
     selection = []
     for article in filtered_articles: 
         with st.container(border=True): 
@@ -460,8 +451,6 @@ def article_selection_lower_bound():
 
             if checked: 
                 selection.append(article)
-
-
 
     if st.toggle("Commit selection"): 
         st.write(f"Selected articles: {selection}")
