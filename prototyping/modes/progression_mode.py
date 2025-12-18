@@ -8,7 +8,10 @@ from components.sentiment_analysis_launcher import (
     plot_sentiment_and_vix, 
     compute_sentiment_vix_correlation
 )
+
 from config import constants as const
+from backend.pdfoutput.pdf_creation import generate_pdf
+
 
 
 def render(): 
@@ -46,32 +49,32 @@ def render():
     st.write(const.MSG_SELECT_DOCUMENTS)
     
     # Article Selection for progression mode (starting date + optional multiple filters with intersection)
-    start_analysis, selected_articles, filters = article_selection_progression_mode_filtered()
+    selected_articles, filters = article_selection_progression_mode_filtered()
 
     st.divider()
 
     # Analysis Step
-    if start_analysis and selected_articles:
+    if st.toggle("start analysis"): 
         st.header("Analysis Results")
         
         with st.spinner("Running sentiment analysis..."):
-            dates, sentiments = launch_sentiment_analysis_progression(
+            df = launch_sentiment_analysis_progression(
                 selected_articles, 
                 filters
             )
         
         # Plot sentiment progression
-        plot_dates_vs_sentiments(dates, sentiments)
+        plot_dates_vs_sentiments(df)
         
         # Show basic statistics
-        if sentiments:
-            avg_sentiment = sum(sentiments) / len(sentiments)
+        if df is not None:
+            avg_sentiment = df["average_sentiment"].mean()
             col1, col2, col3 = st.columns(3)
             
             with col1:
                 st.metric("Average Sentiment", f"{avg_sentiment:.3f}")
             with col2:
-                st.metric("Article Count", len(sentiments))
+                st.metric("Article Count", len(df["average_sentiment"]))
             with col3:
                 sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
                 st.metric("Overall Sentiment", sentiment_label)
@@ -86,28 +89,21 @@ def render():
                 vix = get_vix()
             
             # Plot sentiment vs VIX
-            plot_sentiment_and_vix(dates, sentiments, vix)
+            plot_sentiment_and_vix(df, vix)
             
             # Calculate and display correlation
-            corr = compute_sentiment_vix_correlation(dates, sentiments, vix)
+            corr = compute_sentiment_vix_correlation(list(df["dates"]), list(df["sentiments"]), vix)
             
             st.metric(
                 "Sentiment–VIX Correlation", 
                 f"{corr:.3f}",
                 help="Correlation between sentiment scores and VIX levels. Values range from -1 to 1."
             )
+        if st.toggle("reset export data"): 
+            st.session_state.export_data = [] 
+          
             
-            # Interpretation
-            if abs(corr) < 0.3:
-                interpretation = "weak"
-            elif abs(corr) < 0.7:
-                interpretation = "moderate"
-            else:
-                interpretation = "strong"
             
-            direction = "negative" if corr < 0 else "positive"
-            
-            st.info(f"There is a **{interpretation} {direction}** correlation between sentiment and VIX.")
         
         st.success("Analysis complete!")
 
@@ -116,3 +112,11 @@ def render():
     # Export Step
     if st.toggle(const.PROGRESSION_MODE_EXPORT_TOGGLE): 
         st.write(const.MSG_EXPORT_PDF)
+        pdf_bytes = generate_pdf(st.session_state.export_data)
+        
+        st.download_button(
+            label="Download PDF",
+            data=pdf_bytes,
+            file_name="generated_report.pdf",
+            mime="application/pdf"
+        )

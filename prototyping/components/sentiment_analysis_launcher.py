@@ -1,6 +1,9 @@
 from typing import List, Dict
 import streamlit as st
 from backend.ml.sentiment_analysis import sentiment_analysis_text 
+from backend.aws_querying.DocumentData import (get_articles_s3, 
+                                               check_exists_article_sentiment_analysis, 
+                                               add_article_sentiment_analysis )
 from tqdm import tqdm 
 
 import calendar
@@ -15,43 +18,53 @@ from datetime import datetime
 import pandas as pd
 
 
+
 @st.cache_data(show_spinner="Running sentiment analysis...")
 def cached_sentiment_analysis(
-    article_file_names,
+    selected_articles,
     articles_contents,
-):
+) :
     """
-    This function is important! Avoids having to re-run the sentiment analysis 
-    (still not ideal; storing the sentiment is definitely the best solution)
+    this function is important! avoids having to re-run the sentiment analysis (still not ideal; storing the sentiment 
+    is definitely the best solution)
     """
     results = {}
-    for i, article_file_name in enumerate(article_file_names):
-        content = articles_contents[article_file_name]
-        if len(content) > 5000:
-            continue
-        print(f"Article {i+1}: {article_file_name}")
-        print(f"  Length: {len(content)} chars")
-        print(f"  First 100 chars: {content[:100]}")
-        print(f"  Has special characters: {any(ord(c) > 127 for c in content[:1000])}")
-        
-        average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
-            articles_contents[article_file_name],
-            True,
-            True,
-            False,
-        )
-        results[article_file_name] = (
-            average,
-            sentiment_label,
-            confidence,
-            analysis_results,
-        )
-        print(f"average:{average}")
-        print(f"sentiment label:{sentiment_label}")
-        print(f"confidence:{confidence}")
-        print(f"analysis results:{analysis_results}")
-        print("---")
+    article_file_names = [article["file_name"] for article in selected_articles]
+
+    for article, file_name in zip(selected_articles, article_file_names):
+        article_sentiment = check_exists_article_sentiment_analysis(article["DocumentID"])
+        if article_sentiment: 
+            results[file_name] = (article_sentiment["average_sentiment"], article_sentiment["label"], 
+                                  article_sentiment["confidence"], article_sentiment["details"])
+
+        else: 
+
+            average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
+                articles_contents[file_name],
+                True,
+                True,
+                False,
+            )
+            add_article_sentiment_analysis(
+                article["DocumentID"], 
+                average, 
+                sentiment_label, 
+                confidence, 
+                analysis_results
+                
+            )
+
+            results[file_name] = (
+                average,
+                sentiment_label,
+                confidence,
+                analysis_results,
+            )
+            st.write("done caching in dynamodb")
+
     return results
+
+
 
 
 def launch_sentiment_analysis_progression(selected_articles: List, filters: Dict):
@@ -68,11 +81,13 @@ def launch_sentiment_analysis_progression(selected_articles: List, filters: Dict
     # Run sentiment analysis on all articles
     article_file_names = tuple(article["file_name"] for article in selected_articles)
     articles_contents = get_articles_s3(article_file_names)
+    
+
+
     sentiment_results = cached_sentiment_analysis(
-        article_file_names,
+        selected_articles, 
         articles_contents,
     )
-    
     # Add sentiment results to articles
     for article in selected_articles:
         if article["file_name"] in sentiment_results:
@@ -104,7 +119,22 @@ def launch_sentiment_analysis_progression(selected_articles: List, filters: Dict
     else:
         st.subheader("Sentiment Progression - All Articles")
     
-    return dates, sentiments
+
+    df = pd.DataFrame({
+        "date": dates, 
+        "average_sentiment":sentiments 
+    })
+
+
+    df = (
+        df
+        .groupby("date", as_index=False)["average_sentiment"]
+        .mean()
+    )   
+
+
+
+    return df
 
 
 def launch_sentiment_analysis_comparison(selected_articles: List, filters: Dict):
@@ -276,14 +306,15 @@ def get_vix():
     return data
 
 
-def plot_dates_vs_sentiments(dates, sentiments): 
-    print("we in plot")
+
+
+def plot_dates_vs_sentiments(df): 
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatter(
-            x=dates,
-            y=sentiments,
+            x=df["date"],
+            y=df["average_sentiment"],
             mode="lines+markers",
             name="Values"
         )
@@ -297,9 +328,23 @@ def plot_dates_vs_sentiments(dates, sentiments):
         template="plotly_white"
     )
     st.plotly_chart(fig, use_container_width=True)
+    interpretation = st.text_area(
+        label= "Enter an interpretation", 
+        key = ""
+    )
+    if st.toggle("add to article"): 
+        fig_for_export = go.Figure(fig)  # shallow copy
+        fig_for_export.update_layout(annotations=[])
+        data ={
+            "figure": fig_for_export, 
+            "interpretation": interpretation
+        }
+        st.session_state.export_data.append(data)
+    
 
 
-def plot_sentiment_and_vix(dates, sentiments, vix_data):
+
+def plot_sentiment_and_vix(sentiments, vix_data):
     """
     dates: list of article dates (strings or datetimes)
     sentiments: list of sentiment scores
@@ -311,8 +356,8 @@ def plot_sentiment_and_vix(dates, sentiments, vix_data):
     # Sentiment trace (primary axis)
     fig.add_trace(
         go.Scatter(
-            x=pd.to_datetime(dates),
-            y=sentiments,
+            x=pd.to_datetime(sentiments["date"]),
+            y=sentiments["average_sentiment"],
             mode="lines+markers",
             name="Sentiment Score",
         ),
