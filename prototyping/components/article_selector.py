@@ -277,32 +277,62 @@ def article_selection_lower_bound_and_asset_filtering():
 
 
     
+    # Initialize session state for selected articles
+    if "selected_article_keys" not in st.session_state:
+        st.session_state.selected_article_keys = set()
+    
+    # Create a unique key for each article using DocumentID
+    def get_article_key(article):
+        return article.get('DocumentID', f"{article.get('title', '')}_{article.get('date', '')}")
+    
+    # Store filtered articles in session state for select all functionality
+    filtered_article_keys = [get_article_key(article) for article in filtered_articles]
+    
+    # Select All and Reset Selection buttons
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("Select All", use_container_width=True):
+            st.session_state.selected_article_keys = set(filtered_article_keys)
+            # Also set individual checkbox states
+            for key in filtered_article_keys:
+                st.session_state[f"checkbox_{key}"] = True
+            st.rerun()
+    with col_btn2:
+        if st.button("Reset Selection", use_container_width=True):
+            st.session_state.selected_article_keys = set()
+            # Also clear individual checkbox states
+            for key in filtered_article_keys:
+                st.session_state[f"checkbox_{key}"] = False
+            st.rerun()
+    
     # Article selection UI
     selection = []
-
-
-    selection = []
-
-    for idx, article in enumerate(filtered_articles):
-        article_key = f"article_select_{idx}"
-
-        # Initialize checkbox state based on select_all
-        if article_key not in st.session_state:
-            st.session_state[article_key] = select_all
-        elif select_all:
-            st.session_state[article_key] = True
-        elif not select_all:
-            st.session_state[article_key] = False
-
-        with st.container(border=True):
+    for article in filtered_articles: 
+        article_key = get_article_key(article)
+        is_selected = article_key in st.session_state.selected_article_keys
+        
+        with st.container(border=True): 
             col1, col2 = st.columns([0.9, 0.1])
-
-            checked = col2.checkbox(
-                "",
-                key=article_key
-            )
-
-            with col1:
+            # Use article_key as checkbox key - Streamlit will maintain state through this key
+            checkbox_state_key = f"checkbox_{article_key}"
+            
+            # Initialize checkbox state if it doesn't exist, otherwise respect existing state
+            # but update it if the article should be selected (e.g., from Select All button)
+            if checkbox_state_key not in st.session_state:
+                st.session_state[checkbox_state_key] = is_selected
+            elif is_selected:
+                # Ensure checkbox reflects that article should be selected
+                st.session_state[checkbox_state_key] = True
+            
+            checked = col2.checkbox("", key=checkbox_state_key)
+            
+            # Sync session state with checkbox state
+            if checked:
+                st.session_state.selected_article_keys.add(article_key)
+            else:
+                st.session_state.selected_article_keys.discard(article_key)
+            
+            with col1: 
                 st.markdown(f"**{article['title']}**")
                 st.markdown(f"Date: {article['date']}")
                 st.markdown(f"Source: {article['source']}")
