@@ -12,18 +12,18 @@ export default function AnalyzePage() {
   const sidebarWidth = isCollapsed ? 'lg:ml-20' : 'lg:ml-64';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Header Section with Subtle Background */}
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
-        <div className="container mx-auto px-4 py-12">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+        <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
+          <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
               Financial Sentiment Analyzer
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-base sm:text-lg text-gray-600">
               Quickly analyze of sentiment of documents, news articles, or text snippets.
             </p>
           </div>
@@ -31,7 +31,8 @@ export default function AnalyzePage() {
       </header>
 
       {/* Main Content Area */}
-      <main className={`container mx-auto px-4 py-16 max-w-7xl space-y-8 transition-all duration-300 ${sidebarWidth}`}>
+      <main className={`w-full px-4 sm:px-6 py-8 sm:py-16 transition-all duration-300 ${sidebarWidth}`}>
+        <div className="mx-auto space-y-6 sm:space-y-8 max-w-full lg:max-w-4xl xl:max-w-5xl">
         <DataInput />
         
         {/* Sentiment Results Section */}
@@ -44,6 +45,7 @@ export default function AnalyzePage() {
           
           {/* Right Column: Detailed Sentiment Breakdown */}
           <DetailedSentimentBreakdown />
+        </div>
         </div>
       </main>
     </div>
