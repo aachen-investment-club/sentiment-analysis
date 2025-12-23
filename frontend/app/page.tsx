@@ -42,7 +42,7 @@ export default function Home() {
               Sentiment over time mode
             </h2>
             <p className="text-sm text-gray-600 mb-5 sm:mb-6">
-              Track how sentiment evolves across selected documents over time. 
+              Track how the sentiment of an asset evolves over time. 
               Compare sentiment trends with market volatility (VIX).
             </p>
             <Link 
@@ -59,7 +59,7 @@ export default function Home() {
               Asset sentiment comparison mode
             </h2>
             <p className="text-sm text-gray-600 mb-5 sm:mb-6">
-              Compare sentiment across different assets, markets, or commodities. 
+              Compare the sentiments of multiple assets. 
               Analyze relative sentiment performance.
             </p>
             <Link 
