@@ -157,7 +157,7 @@ export default function Sidebar() {
                 }
                 ${isCollapsed ? 'justify-center' : ''}
               `}
-              title={isCollapsed ? 'Sentiment over time mode' : ''}
+              title={isCollapsed ? 'Progression Mode' : ''}
             >
               <svg
                 className="w-5 h-5 flex-shrink-0"
@@ -172,7 +172,7 @@ export default function Sidebar() {
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              {!isCollapsed && <span className="truncate">Sentiment over time mode</span>}
+              {!isCollapsed && <span className="truncate">Progression Mode</span>}
             </Link>
 
             {/* Comparison Mode */}
@@ -188,7 +188,7 @@ export default function Sidebar() {
                 }
                 ${isCollapsed ? 'justify-center' : ''}
               `}
-              title={isCollapsed ? 'Asset sentiment comparison mode' : ''}
+              title={isCollapsed ? 'Comparison Mode' : ''}
             >
               <svg
                 className="w-5 h-5 flex-shrink-0"
@@ -203,7 +203,7 @@ export default function Sidebar() {
                   d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
                 />
               </svg>
-              {!isCollapsed && <span className="truncate">Asset sentiment comparison mode</span>}
+              {!isCollapsed && <span className="truncate">Comparison Mode</span>}
             </Link>
 
             {/* Quick Analyze Link */}
@@ -233,8 +233,8 @@ export default function Sidebar() {
                   strokeWidth={2}
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
                 />
-              </svg>
-              {!isCollapsed && <span>Quick Analyze</span>}
+              </svg>    
+              {!isCollapsed && <span>Analyze Mode</span>}
             </Link>
           </div>
         </div>
