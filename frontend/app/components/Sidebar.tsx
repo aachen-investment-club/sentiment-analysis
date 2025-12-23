@@ -180,7 +180,7 @@ export default function Sidebar() {
               href="/comparison"
               onClick={() => setIsOpen(false)}
               className={`
-                block w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3
+                block w-full px-4 py-3 rounded-lg font-medium transition-colors mb-2 flex items-center gap-3
                 ${
                   isActive('/comparison')
                     ? 'bg-blue-600 text-white'
@@ -205,10 +205,8 @@ export default function Sidebar() {
               </svg>
               {!isCollapsed && <span className="truncate">Asset sentiment comparison mode</span>}
             </Link>
-          </div>
 
-          {/* Analyze Link */}
-          <div className="mt-auto pt-4 border-t border-gray-300">
+            {/* Quick Analyze Link */}
             <Link
               href="/analyze"
               onClick={() => setIsOpen(false)}
@@ -221,7 +219,7 @@ export default function Sidebar() {
                 }
                 ${isCollapsed ? 'justify-center' : ''}
               `}
-              title={isCollapsed ? 'Quick Analyze' : ''}
+              title={isCollapsed ? 'Detailed Sentiment Breakdown' : ''}
             >
               <svg
                 className="w-5 h-5 flex-shrink-0"
