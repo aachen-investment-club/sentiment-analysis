@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.api.routes import articles
+
 app = FastAPI(
     title="Sentiment Analysis API",
     description="API for financial sentiment analysis using FinBERT",
@@ -15,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(articles.router)
 
 
 @app.get("/")
