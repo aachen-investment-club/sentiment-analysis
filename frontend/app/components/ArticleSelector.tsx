@@ -57,34 +57,32 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/list-articles');
-      // const data = await response.json();
+      const response = await fetch('http://localhost:8000/api/articles');
       
-      // Mock data for now
-      const mockArticles: Article[] = [
-        {
-          title: 'Bitcoin Reaches New High',
-          date: '2024-01-15',
-          source: 'Reuters',
-          assets: ['BTC', 'USD'],
-          commodities: [],
-          markets: ['Crypto', 'US'],
-        },
-        {
-          title: 'Stock Market Analysis',
-          date: '2024-02-01',
-          source: 'Bloomberg',
-          assets: ['SPY'],
-          commodities: [],
-          markets: ['US'],
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch articles: ${response.statusText}`);
+      }
       
-      setArticles(mockArticles);
-      extractAvailableOptions(mockArticles);
+      const data = await response.json();
+      
+      // Transform the API response to match the Article interface
+      // The API returns items with DocumentID (from DynamoDB primary key)
+      const transformedArticles: Article[] = data.map((item: any) => ({
+        DocumentID: item.DocumentID,
+        title: item.title || '',
+        date: item.date || '',
+        source: item.source || '',
+        assets: Array.isArray(item.assets) ? item.assets : [],
+        commodities: Array.isArray(item.commodities) ? item.commodities : [],
+        markets: Array.isArray(item.markets) ? item.markets : [],
+      }));
+      
+      setArticles(transformedArticles);
+      extractAvailableOptions(transformedArticles);
     } catch (error) {
       console.error('Error fetching articles:', error);
+      // Show error to user - you might want to add a state for error messages
+      setArticles([]);
     } finally {
       setLoading(false);
     }

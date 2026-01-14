@@ -2,6 +2,8 @@
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
+# AWS
+boto3>=1.28.0
 # PDF Processing
 PyMuPDF>=1.23.0  # Fast text extraction
 pdfplumber>=0.10.0  # Best for tables
