@@ -6,6 +6,7 @@ import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelector from '../components/ArticleSelector';
 import CollapsibleSection from '../components/CollapsibleSection';
+import SentimentProgression from '../components/SentimentProgression';
 
 interface Article {
   title: string;
@@ -178,14 +179,8 @@ export default function ProgressionPage() {
                         </div>
 
                         {showSentimentPlot && analysisData && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              <div className="text-center">
-                                <p className="text-lg font-medium mb-2">Sentiment Over Time Chart</p>
-                                <p className="text-sm">Chart implementation will be added with backend integration</p>
-                              </div>
-                            </div>
-                          </div>
+                          <SentimentProgression></SentimentProgression>
+
                         )}
 
                         <div className="border-t border-gray-300"></div>
