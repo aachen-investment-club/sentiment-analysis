@@ -65,6 +65,7 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
       
       const data = await response.json();
       
+      
       // Transform the API response to match the Article interface
       // The API returns items with DocumentID (from DynamoDB primary key)
       const transformedArticles: Article[] = data.map((item: any) => ({
