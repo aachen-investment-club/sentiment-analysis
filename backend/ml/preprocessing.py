@@ -7,9 +7,24 @@ import re # For regular expressions
 import nltk
 from openai import OpenAI
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-client = OpenAI()
+_client = None
+
+def get_openai_client():
+    """Lazy initialization of OpenAI client to avoid errors when API key is not set."""
+    global _client
+    if _client is None:
+        # Only initialize if API key is available
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is not set. "
+                "Set it in your .env file or environment to use LLM-based text cleaning."
+            )
+        _client = OpenAI(api_key=api_key)
+    return _client
 
 for resource in ("punkt", "punkt_tab"):
     try:
@@ -90,6 +105,7 @@ def llm_fine_clean(first_pass: str) -> str:
     """
     Cleaned text through regular expression is cleaned in a second round through LLM to identify unidentified leackage of table elements etc.
     """
+    client = get_openai_client()
     response = client.responses.create(
         model="gpt-4o-mini",
         input="""You are a text cleaning assistant. Your task is to identify and remove ONLY:

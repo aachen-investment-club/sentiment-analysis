@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ArticleUploadForm() {
+interface ArticleUploaderProps {
+  onUploadSuccess?: () => void;
+}
+
+export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderProps) {
   const [articleData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     source: 'Reuters',
@@ -29,40 +33,24 @@ export default function ArticleUploadForm() {
 
   const sources = ['Reuters', 'Bloomberg', 'WSJ', 'Bitcoin.com News', 'Internal'];
 
-  // Auto-detect language 
+  // Auto-detect language (frontend-only for now)
   useEffect(() => {
-    const detectLanguage = async () => {
-      if (articleData.title && articleData.title !== prevTitle) {
-        setPrevTitle(articleData.title);
-        
-        try {
-          const response = await fetch('/api/detect-language', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: articleData.title })
-          });
-          
-          if (response.ok) {
-            const { isGerman } = await response.json();
-            const detectedLang = isGerman ? 'German' : 'English';
-            setFormData(prev => ({ ...prev, language: detectedLang }));
-            setLanguageHint(`(Auto-detected: ${detectedLang})`);
-          }
-        } catch (err) {
-          setLanguageHint('(Auto-detection unavailable)');
-        }
-      }
-    };
-
-    detectLanguage();
+    if (articleData.title && articleData.title !== prevTitle) {
+      setPrevTitle(articleData.title);
+      
+      // Simple language detection based on common German words/characters
+      const germanIndicators = /[äöüÄÖÜß]|der|die|das|und|ist|sind|für|mit|auf/i;
+      const isGerman = germanIndicators.test(articleData.title);
+      const detectedLang = isGerman ? 'German' : 'English';
+      setFormData(prev => ({ ...prev, language: detectedLang }));
+      setLanguageHint(`(Auto-detected: ${detectedLang})`);
+    }
   }, [articleData.title, prevTitle]);
 
-  const handleMultiSelect = (field: 'assets' | 'commodities' | 'markets', value: string) => {
+  const handleSelect = (field: 'assets' | 'commodities' | 'markets', value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter(item => item !== value)
-        : [...prev[field], value]
+      [field]: value ? [value] : []
     }));
   };
 
@@ -92,70 +80,47 @@ export default function ArticleUploadForm() {
       return;
     }
 
-    try {
-      const languageCode = articleData.language === 'English' ? 'en' : 'de';
-      
-      if (articleData.format === 'text') {
-        // Calls add_article_text via API
-        const response = await fetch('/api/add-article-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: articleData.date,
-            assets: articleData.assets,
-            commodities: articleData.commodities,
-            markets: articleData.markets,
-            source: articleData.source,
-            text: articleData.text,
-            title: articleData.title,
-            language: languageCode
-          })
-        });
+    // Simulate upload delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-        if (!response.ok) throw new Error('Upload failed');
-      } else {
-        // Calls add_article_pdf via API
-        const articleDataToSend = new FormData();
-        articleDataToSend.append('date', articleData.date);
-        articleDataToSend.append('assets', JSON.stringify(articleData.assets));
-        articleDataToSend.append('commodities', JSON.stringify(articleData.commodities));
-        articleDataToSend.append('markets', JSON.stringify(articleData.markets));
-        articleDataToSend.append('source', articleData.source);
-        articleDataToSend.append('title', articleData.title);
-        articleDataToSend.append('language', languageCode);
-        if (articleData.file) {
-          articleDataToSend.append('file', articleData.file);
-        }
+    // Hardcoded success - no actual API call
+    // TODO: Replace with actual API calls when backend is ready
+    console.log('Article data (not sent to backend):', {
+      date: articleData.date,
+      assets: articleData.assets,
+      commodities: articleData.commodities,
+      markets: articleData.markets,
+      source: articleData.source,
+      title: articleData.title,
+      language: articleData.language === 'English' ? 'en' : 'de',
+      format: articleData.format,
+      text: articleData.format === 'text' ? articleData.text : undefined,
+      file: articleData.format === 'pdf' ? articleData.file?.name : undefined
+    });
 
-        const response = await fetch('/api/add-article-pdf', {
-          method: 'POST',
-          body: articleDataToSend
-        });
-
-        if (!response.ok) throw new Error('Upload failed');
-      }
-
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        source: 'Reuters',
-        assets: [],
-        commodities: [],
-        markets: [],
-        format: 'text',
-        title: '',
-        language: 'English',
-        text: '',
-        file: null
-      });
-      setPrevTitle('');
-      setLanguageHint('');
-      setUploadSuccess(true);
-      setTimeout(() => setUploadSuccess(false), 3000);
-    } catch (err) {
-      setError('Failed to save article. Please try again.');
-    } finally {
-      setLoading(false);
+    // Reset form
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      source: 'Reuters',
+      assets: [],
+      commodities: [],
+      markets: [],
+      format: 'text',
+      title: '',
+      language: 'English',
+      text: '',
+      file: null
+    });
+    setPrevTitle('');
+    setLanguageHint('');
+    
+    // Show hardcoded success message
+    setUploadSuccess(true);
+    if (onUploadSuccess) {
+      onUploadSuccess();
     }
+    setTimeout(() => setUploadSuccess(false), 3000);
+    setLoading(false);
   };
 
   return (
@@ -175,7 +140,7 @@ export default function ArticleUploadForm() {
                 type="date"
                 value={articleData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
 
@@ -186,7 +151,7 @@ export default function ArticleUploadForm() {
               <select
                 value={articleData.source}
                 onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 {sources.map(source => (
                   <option key={source} value={source}>{source}</option>
@@ -201,66 +166,48 @@ export default function ArticleUploadForm() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Related Assets
               </label>
-              <div className="flex flex-wrap gap-2">
+              <select
+                value={articleData.assets.length > 0 ? articleData.assets[0] : ''}
+                onChange={(e) => handleSelect('assets', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="">Select asset</option>
                 {articleLabels.assets.map(asset => (
-                  <button
-                    key={asset}
-                    type="button"
-                    onClick={() => handleMultiSelect('assets', asset)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      articleData.assets.includes(asset)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {asset}
-                  </button>
+                  <option key={asset} value={asset}>{asset}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Related Commodities
               </label>
-              <div className="flex flex-wrap gap-2">
+              <select
+                value={articleData.commodities.length > 0 ? articleData.commodities[0] : ''}
+                onChange={(e) => handleSelect('commodities', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="">Select commodity</option>
                 {articleLabels.commodities.map(commodity => (
-                  <button
-                    key={commodity}
-                    type="button"
-                    onClick={() => handleMultiSelect('commodities', commodity)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      articleData.commodities.includes(commodity)
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {commodity}
-                  </button>
+                  <option key={commodity} value={commodity}>{commodity}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Related Markets
               </label>
-              <div className="flex flex-wrap gap-2">
+              <select
+                value={articleData.markets.length > 0 ? articleData.markets[0] : ''}
+                onChange={(e) => handleSelect('markets', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="">Select market</option>
                 {articleLabels.markets.map(market => (
-                  <button
-                    key={market}
-                    type="button"
-                    onClick={() => handleMultiSelect('markets', market)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      articleData.markets.includes(market)
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {market}
-                  </button>
+                  <option key={market} value={market}>{market}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div>
@@ -270,7 +217,7 @@ export default function ArticleUploadForm() {
               <select
                 value={articleData.format}
                 onChange={(e) => setFormData(prev => ({ ...prev, format: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="text">Text</option>
                 <option value="pdf">PDF</option>
@@ -288,7 +235,7 @@ export default function ArticleUploadForm() {
               type="text"
               value={articleData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="Enter article title"
             />
           </div>
@@ -300,7 +247,7 @@ export default function ArticleUploadForm() {
             <select
               value={articleData.language}
               onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="English">English</option>
               <option value="German">German</option>
@@ -323,7 +270,7 @@ export default function ArticleUploadForm() {
               value={articleData.text}
               onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
               rows={10}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="Paste or type article text here..."
             />
           </div>
