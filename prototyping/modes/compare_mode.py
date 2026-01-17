@@ -40,18 +40,22 @@ def render():
     
     # Article Selection according to Compare mode
     start_analysis, selected_articles, filters = article_selection_compare_mode()
+    print(start_analysis)
 
     st.divider()
 
     # Analysis Step
     if start_analysis and selected_articles:
         st.header("Analysis Results")
+        print(filters)
         
         # Check if any filters were selected
         if not filters:
             st.warning("No comparison filters selected. Please select at least one asset, market, or commodity to compare.")
         else:
             articles = launch_sentiment_analysis_comparison(selected_articles)
+            print(articles
+                )
             
             # Store in session state!
             st.session_state.articles = articles
