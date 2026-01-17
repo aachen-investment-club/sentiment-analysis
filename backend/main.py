@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import articles
+from backend.api.routes import progression 
 
 app = FastAPI(
     title="Sentiment Analysis API",
@@ -20,6 +21,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(articles.router)
+app.include_router(progression.router)
 
 
 @app.get("/")

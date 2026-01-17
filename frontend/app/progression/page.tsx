@@ -6,6 +6,7 @@ import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelector from '../components/ArticleSelector';
 import CollapsibleSection from '../components/CollapsibleSection';
+import SentimentProgression from '../components/SentimentProgression';
 
 interface Article {
   title: string;
@@ -23,6 +24,13 @@ interface Filters {
   commodities?: string[];
 }
 
+
+interface AnalysisData{
+  dates: Date[]; 
+  sentiments: number[]; 
+}
+
+
 export default function ProgressionPage() {
   const { isCollapsed } = useSidebar();
   const sidebarWidth = isCollapsed ? 'lg:ml-20' : 'lg:ml-64';
@@ -37,7 +45,7 @@ export default function ProgressionPage() {
 
   // Analysis step state
   const [startAnalysis, setStartAnalysis] = useState(false);
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [showSentimentPlot, setShowSentimentPlot] = useState(false);
   const [showVIXAnalysis, setShowVIXAnalysis] = useState(false);
   const [showSentimentVsAsset, setShowSentimentVsAsset] = useState(false);
@@ -64,13 +72,31 @@ export default function ProgressionPage() {
     }
 
     setStartAnalysis(true);
-    // TODO: Call API endpoint for sentiment analysis
-    // For now, mock data
-    const mockData = {
-      dates: ['2024-01-01', '2024-01-15', '2024-02-01'],
-      sentiments: [0.5, 0.7, 0.3],
-    };
-    setAnalysisData(mockData);
+
+    console.log(selectedArticles);
+
+    const response = await fetch("http://localhost:8000/api/sentiment/start_analysis", {
+      method: "POST", 
+      headers: {
+      "Content-Type": "application/json",
+      }, 
+      body: JSON.stringify(
+        selectedArticles
+      )
+    })
+
+    if (!response.ok){
+      throw new Error(`Failed to fetch articles: ${response.statusText}`)
+    }
+    const data = await response.json()
+    console.log(data.dates)
+    console.log(data.sentiments)
+    setAnalysisData(
+    {
+      dates: data.dates,
+      sentiments: data.sentiments,
+    }
+    );
   };
 
   const handleResetExportData = () => {
@@ -178,14 +204,11 @@ export default function ProgressionPage() {
                         </div>
 
                         {showSentimentPlot && analysisData && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              <div className="text-center">
-                                <p className="text-lg font-medium mb-2">Sentiment Over Time Chart</p>
-                                <p className="text-sm">Chart implementation will be added with backend integration</p>
-                              </div>
-                            </div>
-                          </div>
+                          <SentimentProgression
+                            dates={analysisData.dates}
+                            sentiments={analysisData.sentiments}
+                          />
+
                         )}
 
                         <div className="border-t border-gray-300"></div>
