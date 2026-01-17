@@ -6,6 +6,8 @@ import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelectorComparison from '../components/ArticleSelectorComparison';
 import CollapsibleSection from '../components/CollapsibleSection';
+import LinesCompare from '../components/LinesCompare';
+import BarsCompare from '../components/BarsCompare';
 
 interface Article {
   title: string;
@@ -17,11 +19,41 @@ interface Article {
   DocumentID?: string;
 }
 
+
+
+
+
+
 interface Filters {
   assets?: string[];
   markets?: string[];
   commodities?: string[];
 }
+
+
+
+interface AnalysisData{
+  dates: Date[]; 
+  sentiments: number[]; 
+}
+
+
+
+
+type CompareSeries = {
+  dates: string[];
+  sentiments: number[];
+};
+
+type CompareCategoryData = Record<string, CompareSeries>;
+
+type CompareDataResponse = {
+  assets: CompareCategoryData;
+  commodities: CompareCategoryData;
+  markets: CompareCategoryData;
+};
+
+
 
 export default function ComparisonPage() {
   const { isCollapsed } = useSidebar();
@@ -40,29 +72,58 @@ export default function ComparisonPage() {
   const [articlesWithSentiment, setArticlesWithSentiment] = useState<Article[]>([]);
   const [showSentimentPlots, setShowSentimentPlots] = useState(false);
 
-  const handleUploadSuccess = () => {
+
+
+
+  const [compareDataResponse, setCompareDataResponse] = useState<CompareDataResponse | null>(null);
+
+  const [assetCompareData, setAssetCompareData] = useState<CompareCategoryData | null>(null);
+  const [commodityCompareData, setCommodityCompareData] = useState<CompareCategoryData | null>(null);
+  const [marketCompareData, setMarketCompareData] = useState<CompareCategoryData | null>(null);
+
+
+  const handleUploadSuccess =  () => {
     setUploadSuccess(true);
     setTimeout(() => {
       setUploadSuccess(false);
     }, 3000);
   };
 
-  const handleStartAnalysis = (articles: Article[], selectedFilters: Filters) => {
+  const handleStartAnalysis = async (articles: Article[], filterSelection: Filters) => {
     if (articles.length === 0) {
       alert('Please select at least one article');
       return;
     }
 
     setSelectedArticles(articles);
-    setFilters(selectedFilters);
+    setFilters(filterSelection);
+    setAnalysisComplete(true);
+
+    const response = await fetch("http://localhost:8000/api/sentiment/compare_mode", {
+      method: "POST", 
+      headers: {
+      "Content-Type": "application/json",
+      }, 
+      body: JSON.stringify(
+        {
+          articles: articles, 
+          filters: filterSelection
+        } 
+      )
+    })
+
+    if (!response.ok){
+      throw new Error(`Failed to fetch articles: ${response.statusText}`)
+    }
+    const data: CompareDataResponse = await response.json();
+    console.log(data);
+
+    setCompareDataResponse(data);
+    setAssetCompareData(data.assets);
+    setCommodityCompareData(data.commodities);
+    setMarketCompareData(data.markets);
+
     setStartAnalysis(true);
-    
-    // TODO: Call API endpoint for sentiment analysis
-    // For now, simulate analysis
-    setTimeout(() => {
-      setArticlesWithSentiment(articles);
-      setAnalysisComplete(true);
-    }, 1000);
   };
 
   const handleResetExportData = () => {
@@ -188,11 +249,13 @@ export default function ComparisonPage() {
                         {filters?.assets && filters.assets.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Assets - Time Series</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Line chart showing sentiment over time for: {filters.assets.join(', ')}</p>
+
+                                <LinesCompare
+                                  category="Assets"
+                                  analysisData={assetCompareData}
+                                />
                               </div>
-                            </div>
                           </div>
                         )}
 
@@ -200,11 +263,13 @@ export default function ComparisonPage() {
                         {filters?.markets && filters.markets.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Markets - Time Series</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Line chart showing sentiment over time for: {filters.markets.join(', ')}</p>
+                               
+                                <LinesCompare
+                                  category="Markets"
+                                  analysisData={marketCompareData}
+                                />
                               </div>
-                            </div>
                           </div>
                         )}
 
@@ -212,11 +277,13 @@ export default function ComparisonPage() {
                         {filters?.commodities && filters.commodities.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Commodities - Time Series</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Line chart showing sentiment over time for: {filters.commodities.join(', ')}</p>
+
+                                <LinesCompare
+                                  category="Commodities"
+                                  analysisData={commodityCompareData}
+                                />
                               </div>
-                            </div>
                           </div>
                         )}
 
@@ -224,11 +291,9 @@ export default function ComparisonPage() {
                         {filters?.assets && filters.assets.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Assets</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Bar chart comparing average sentiment for: {filters.assets.join(', ')}</p>
+                                <BarsCompare category="Assets" analysisData={assetCompareData ?? {}} />
                               </div>
-                            </div>
                           </div>
                         )}
 
@@ -236,11 +301,9 @@ export default function ComparisonPage() {
                         {filters?.markets && filters.markets.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Markets</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Bar chart comparing average sentiment for: {filters.markets.join(', ')}</p>
+                                <BarsCompare category="Markets" analysisData={marketCompareData ?? {}} />
                               </div>
-                            </div>
                           </div>
                         )}
 
@@ -248,11 +311,9 @@ export default function ComparisonPage() {
                         {filters?.commodities && filters.commodities.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Commodities</h4>
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
                               <div className="text-center">
-                                <p className="text-sm">Bar chart comparing average sentiment for: {filters.commodities.join(', ')}</p>
+                                <BarsCompare category="Commodities" analysisData={commodityCompareData ?? {}} />
                               </div>
-                            </div>
                           </div>
                         )}
 
