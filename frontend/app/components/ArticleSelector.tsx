@@ -10,6 +10,8 @@ interface Article {
   commodities: string[];
   markets: string[];
   DocumentID?: string;
+  file_name: string; 
+  language: string;
 }
 
 interface Filters {
@@ -65,6 +67,7 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
       
       const data = await response.json();
       
+      
       // Transform the API response to match the Article interface
       // The API returns items with DocumentID (from DynamoDB primary key)
       const transformedArticles: Article[] = data.map((item: any) => ({
@@ -72,6 +75,8 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
         title: item.title || '',
         date: item.date || '',
         source: item.source || '',
+        file_name: item.file_name || '',
+        language: item.language || '',
         assets: Array.isArray(item.assets) ? item.assets : [],
         commodities: Array.isArray(item.commodities) ? item.commodities : [],
         markets: Array.isArray(item.markets) ? item.markets : [],

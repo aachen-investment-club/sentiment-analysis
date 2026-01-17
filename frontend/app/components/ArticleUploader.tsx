@@ -4,6 +4,13 @@ interface ArticleUploaderProps {
   onUploadSuccess?: () => void;
 }
 
+
+type ArticleLabels = {
+  markets: string[], 
+  commodities: string[], 
+  assets: string[]
+}
+
 export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderProps) {
   const [articleData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -14,9 +21,8 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     format: 'text',
     title: '',
     language: 'English',
-    text: '',
-    file: null as File | null
-  });
+    text: ''
+});
 
   const [prevTitle, setPrevTitle] = useState('');
   const [languageHint, setLanguageHint] = useState('');
@@ -25,13 +31,54 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
   const [loading, setLoading] = useState(false);
 
   // Mock data - replace with your actual data from backend
-  const articleLabels = {
-    assets: ['BTC', 'ETH', 'USD', 'EUR', 'Gold'],
-    commodities: ['Oil', 'Gas', 'Wheat', 'Corn', 'Copper'],
-    markets: ['US', 'EU', 'Asia', 'Crypto', 'Forex']
-  };
+  
 
-  const sources = ['Reuters', 'Bloomberg', 'WSJ', 'Bitcoin.com News', 'Internal'];
+  const [articleLabels, setArticleLabels] = useState<ArticleLabels>({
+    markets: [], 
+    commodities: [], 
+    assets: [], 
+  })
+
+  const [sources, setSources] = useState<string[]>([])
+
+
+  useEffect(() => {
+    fetchCategories();
+    //this is executed on mount 
+  }, []);
+
+  const fetchCategories = async () => {
+    try{
+      setLoading(true); 
+      const response = await fetch('http://localhost:8000/api/articles/categories')
+
+      if (!response.ok){
+        throw new Error(`Failed to fetch articles: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      setArticleLabels(
+        {
+          markets: data.markets, 
+          commodities: data. commodities, 
+          assets: data.assets
+        }
+      )
+      
+      const response_sources = await fetch('http://localhost:8000/api/articles/sources')
+
+      const data_sources = await response_sources.json();
+      setSources(data_sources);
+
+    } catch(error) {
+      console.error("Error fetching categories", error);
+    }finally{
+      setLoading(false);
+    }
+
+  }
+
+
 
   // Auto-detect language (frontend-only for now)
   useEffect(() => {
@@ -47,22 +94,19 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     }
   }, [articleData.title, prevTitle]);
 
-  const handleSelect = (field: 'assets' | 'commodities' | 'markets', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value ? [value] : []
-    }));
-  };
+  
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setFormData(prev => ({ ...prev, file }));
-      setError('');
-    } else if (file) {
-      setError('Please upload a valid PDF file');
-    }
-  };
+  const handleSelect = (field: 'assets' | 'commodities' | 'markets', value: string) => {
+  if (!value) return;
+
+  setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field]       
+        : [...prev[field], value],
+    }));
+  };  
+
 
   const handleSubmit = async () => {
     setError('');
@@ -74,17 +118,8 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
       return;
     }
 
-    if (articleData.format === 'pdf' && !articleData.file) {
-      setError('Please upload a PDF file');
-      setLoading(false);
-      return;
-    }
 
-    // Simulate upload delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Hardcoded success - no actual API call
-    // TODO: Replace with actual API calls when backend is ready
     console.log('Article data (not sent to backend):', {
       date: articleData.date,
       assets: articleData.assets,
@@ -95,8 +130,50 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
       language: articleData.language === 'English' ? 'en' : 'de',
       format: articleData.format,
       text: articleData.format === 'text' ? articleData.text : undefined,
-      file: articleData.format === 'pdf' ? articleData.file?.name : undefined
     });
+
+
+
+    
+    const response = await fetch("http://localhost:8000/api/articles/upload_article", {
+      method: "POST", 
+      headers: {
+      "Content-Type": "application/json",
+      }, 
+      body: JSON.stringify({
+      date: articleData.date,
+      assets: articleData.assets,
+      commodities: articleData.commodities,
+      markets: articleData.markets,
+      source: articleData.source,
+      title: articleData.title,
+      language: articleData.language === 'English' ? 'en' : 'de',
+      format: articleData.format,
+      text: articleData.format === 'text' ? articleData.text : undefined,
+      })
+    })
+    
+    
+    if (!response.ok){
+       const err = await response.json().catch(() => null);
+      console.error("Upload failed:", response.status, err);
+      throw new Error("Upload failed");
+    }
+    
+    
+    /* 
+    console.log('Article data (not sent to backend):', {
+      date: articleData.date,
+      assets: articleData.assets,
+      commodities: articleData.commodities,
+      markets: articleData.markets,
+      source: articleData.source,
+      title: articleData.title,
+      language: articleData.language === 'English' ? 'en' : 'de',
+      format: articleData.format,
+      text: articleData.format === 'text' ? articleData.text : undefined,
+    });
+    */
 
     // Reset form
     setFormData({
@@ -108,8 +185,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
       format: 'text',
       title: '',
       language: 'English',
-      text: '',
-      file: null
+      text: ''
     });
     setPrevTitle('');
     setLanguageHint('');
@@ -163,51 +239,160 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         
           <div className="space-y-4">
             <div>
+
+             
+
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Related Assets
+                Related Assets 
               </label>
+
               <select
-                value={articleData.assets.length > 0 ? articleData.assets[0] : ''}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900"
                 onChange={(e) => handleSelect('assets', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
-                <option value="">Select asset</option>
-                {articleLabels.assets.map(asset => (
-                  <option key={asset} value={asset}>{asset}</option>
+                <option value="" className="text-gray-400">
+                  Add Market 
+                </option>
+                {articleLabels.assets.map(c => (
+                  <option
+                    key={c}
+                    value={c}
+                    className="text-gray-900"
+                  >
+                    {c}
+                  </option>
                 ))}
               </select>
+              {articleData.assets.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {articleData.assets.map(c => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {c}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            assets: prev.assets.filter(x => x !== c),
+                          }))
+                        }
+                        className="ml-1 hover:text-blue-900"
+                        aria-label={`Remove ${c}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
             </div>
 
             <div>
+              
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Related Commodities
               </label>
+
               <select
-                value={articleData.commodities.length > 0 ? articleData.commodities[0] : ''}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900"
                 onChange={(e) => handleSelect('commodities', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
-                <option value="">Select commodity</option>
-                {articleLabels.commodities.map(commodity => (
-                  <option key={commodity} value={commodity}>{commodity}</option>
+                <option value="" className="text-gray-400">
+                  Add commodity
+                </option>
+                {articleLabels.commodities.map(c => (
+                  <option
+                    key={c}
+                    value={c}
+                    className="text-gray-900"
+                  >
+                    {c}
+                  </option>
                 ))}
               </select>
+              {articleData.commodities.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {articleData.commodities.map(c => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {c}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            commodities: prev.commodities.filter(x => x !== c),
+                          }))
+                        }
+                        className="ml-1 hover:text-blue-900"
+                        aria-label={`Remove ${c}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
             </div>
 
             <div>
+
+             
+
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Related Markets
+                Related Markets 
               </label>
+
               <select
-                value={articleData.markets.length > 0 ? articleData.markets[0] : ''}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900"
                 onChange={(e) => handleSelect('markets', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
-                <option value="">Select market</option>
-                {articleLabels.markets.map(market => (
-                  <option key={market} value={market}>{market}</option>
+                <option value="" className="text-gray-400">
+                  Add Market 
+                </option>
+                {articleLabels.markets.map(c => (
+                  <option
+                    key={c}
+                    value={c}
+                    className="text-gray-900"
+                  >
+                    {c}
+                  </option>
                 ))}
               </select>
+              {articleData.markets.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {articleData.markets.map(c => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {c}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            markets: prev.markets.filter(x => x !== c),
+                          }))
+                        }
+                        className="ml-1 hover:text-blue-900"
+                        aria-label={`Remove ${c}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
             </div>
 
             <div>
@@ -276,28 +461,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload PDF file
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center hover:border-blue-400 transition-colors">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="hidden"
-                id="pdf-upload"
-              />
-              <label htmlFor="pdf-upload" className="cursor-pointer block">
-                <div className="text-5xl mb-3">📤</div>
-                <p className="text-sm text-gray-600">
-                  {articleData.file ? (
-                    <span className="text-green-600 font-medium">✓ {articleData.file.name}</span>
-                  ) : (
-                    <>Click to upload or drag and drop<br /><span className="text-xs">PDF files only</span></>
-                  )}
-                </p>
-              </label>
-            </div>
+          option disabled
           </div>
         )}
 
