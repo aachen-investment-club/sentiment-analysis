@@ -20,7 +20,7 @@ import requests
 from dotenv import load_dotenv
 import os
 
-load_dotenv
+load_dotenv()
 
 _MODEL_NAME = "yiyanghkust/finbert-tone"
 _FINBERT_C = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
@@ -36,11 +36,12 @@ _PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZE
 
 
 BACKEND2_URL = os.environ.get("FINBERT_URL")
+print(BACKEND2_URL)
 
 def analyze_sentiment_regression_via_backend2(
     sentences: list[str],
-    normalize: bool = False,
-    timeout_s: float = 30.0,
+    german: bool = False, 
+    timeout_s: float = 30.0
 ) -> list[dict]:
     """
     Calls backend2 regression service.
@@ -53,13 +54,18 @@ def analyze_sentiment_regression_via_backend2(
         ]
     }
     """
+
+    if german: 
+        language = "de"
+    else: 
+        language = "en"
     payload = {
         "sentences": sentences,
-        "normalize": normalize,
+        "language": language,
     }
 
     response = requests.post(
-        f"{BACKEND2_URL}/sentiment/regression",
+        f"{BACKEND2_URL}/predict",
         json=payload,
         timeout=timeout_s,
     )
@@ -99,7 +105,7 @@ def sentiment_analysis_text(
         # 🔁 REPLACEMENT: call backend2 instead of local model
         results = analyze_sentiment_regression_via_backend2(
             preprocessed_sentences,
-            normalize=normalize,
+            german  
         )
 
         average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
