@@ -473,6 +473,32 @@ def plot_sentiment_bar_chart(articles: List, category: str, selected_items: List
     ])
     
     st.dataframe(stats_df, use_container_width=True, hide_index=True)
+    interpretation = st.text_area(
+        label= "Enter an interpretation", 
+        key = f"interpretation_compare_bar_{category}", 
+        value = "" 
+    )
+
+    if st.button("Add to article", key = "export_compare_bar_{category}"):
+
+        fig_for_export = go.Figure(fig)
+        fig_for_export.update_layout(annotations=[])
+
+        export = PlotExport(
+            title = f"Sentiment Comparison - {category.capitalize()}", 
+            figure_bytes=fig_for_export, 
+            metrics = [], 
+            interpretation= interpretation
+        )
+
+
+        st.session_state.export_data.append(export)
+        st.success("Added to article")
+
+
+
+
+
 
 
 def plot_sentiment_by_category(articles: List, category: str, selected_items: List):
@@ -562,6 +588,35 @@ def plot_sentiment_by_category(articles: List, category: str, selected_items: Li
                 sentiment_label = "Positive" if avg_sentiment > 0 else "Negative" if avg_sentiment < 0 else "Neutral"
                 st.metric(f"{item} - Overall", sentiment_label)
 
+    interpretation = st.text_area(
+        label= "Enter an interpretation", 
+        key = f"interpretation_compare_line_{category}", 
+        value = "" 
+    )
+
+    if st.button("Add to article", key = "export_compare_line_{category}"):
+
+        fig_for_export = go.Figure(fig)
+        fig_for_export.update_layout(annotations=[])
+
+        metrics = [
+            ("Avg Sentiment", f"{avg_sentiment:.2f}"),
+            ("Article Count",  f"{len(item_articles)}"), 
+            ("Overall Sentiment", str(sentiment_label)),
+        ]
+        export = PlotExport(
+            title = f"Sentiment Comparison - {category.capitalize()}", 
+            figure_bytes=fig_for_export, 
+            metrics = metrics, 
+            interpretation= interpretation
+        )
+
+
+        st.session_state.export_data.append(export)
+        st.success("Added to article")
+
+
+
 
 def get_vix(): 
     if st.session_state.get('lower_bound_year') is None or st.session_state.get('lower_bound_month') is None: 
@@ -648,7 +703,6 @@ def plot_dates_vs_sentiments(df):
 
         st.session_state.export_data.append(export)
         st.success("Added to article")
-
 
 
 
