@@ -11,8 +11,10 @@ from typing import Optional
 from dotenv import load_dotenv
 from huggingface_hub import snapshot_download
 
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
+
 
 class GermanRegressionFinBERTDistil(nn.Module):
     def __init__(self, base_model_path: str, dropout: float = 0.1, freeze_bert: bool = True):
