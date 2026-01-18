@@ -69,6 +69,15 @@ export default function SentimentAndVIX({ dates, sentiments, vixDates, vixValues
 
   const correlation = calculateCorrelation();
 
+  // Calculate metrics
+  const avgSentiment = hasData && sentiments.length > 0 
+    ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length 
+    : null;
+  const docCount = hasData ? sentiments.length : 0;
+  const sentimentLabel = avgSentiment !== null
+    ? avgSentiment > 0.1 ? "Positive" : avgSentiment < -0.1 ? "Negative" : "Neutral"
+    : null;
+
   return (
     <div className="bg-gray-50 rounded-lg p-4">
       <div className="bg-white rounded border border-gray-200 p-3">
@@ -77,11 +86,6 @@ export default function SentimentAndVIX({ dates, sentiments, vixDates, vixValues
             <p className="text-lg font-medium text-black">Sentiment vs Market Volatility (VIX)</p>
             <p className="text-sm text-gray-500">Compare sentiment trends with VIX levels</p>
           </div>
-          {hasData && correlation !== null && (
-            <div className="text-sm text-gray-600">
-              Correlation: <span className="font-medium">{correlation.toFixed(3)}</span>
-            </div>
-          )}
         </div>
 
         <div className="h-96">
@@ -144,13 +148,36 @@ export default function SentimentAndVIX({ dates, sentiments, vixDates, vixValues
           )}
         </div>
 
-        {hasData && correlation !== null && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              <span className="font-semibold">Sentiment–VIX Correlation:</span>{' '}
-              {correlation.toFixed(3)}. Values range from -1 to 1. A negative correlation indicates that 
-              higher VIX (volatility) corresponds to lower sentiment, and vice versa.
-            </p>
+        {hasData && correlation !== null && avgSentiment !== null && (
+          <div className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Metric</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">Sentiment–VIX Correlation</td>
+                    <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-black">{correlation.toFixed(3)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">Average Sentiment</td>
+                    <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-black">{avgSentiment.toFixed(3)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">Article Count</td>
+                    <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-black">{docCount}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">Overall Sentiment</td>
+                    <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-black">{sentimentLabel}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
