@@ -304,27 +304,30 @@ export default function ProgressionPage() {
 
                         <div className="border-t border-gray-300"></div>
 
-                        {/* Sentiment vs Asset Comparison */}
-                        <div className="mb-4">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment vs Asset Comparison</h3>
-                          <button
-                            onClick={() => setShowSentimentVsAsset(!showSentimentVsAsset)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                          >
-                            {showSentimentVsAsset ? 'Hide Asset Comparison' : 'Compare Sentiment and Assets'}
-                          </button>
-                        </div>
-
-                        {showSentimentVsAsset && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            {/* TODO: Implement sentiment vs asset chart component */}
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              Sentiment vs Asset Chart Placeholder
+                        {/* Sentiment vs Asset Comparison - Disabled for now */}
+                        {false && (
+                          <>
+                            <div className="mb-4">
+                              <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment vs Asset Comparison</h3>
+                              <button
+                                onClick={() => setShowSentimentVsAsset(!showSentimentVsAsset)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                              >
+                                {showSentimentVsAsset ? 'Hide Asset Comparison' : 'Compare Sentiment and Assets'}
+                              </button>
                             </div>
-                          </div>
-                        )}
 
-                        <div className="border-t border-gray-300"></div>
+                            {showSentimentVsAsset && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
+                                  Sentiment vs Asset Chart Placeholder
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="border-t border-gray-300"></div>
+                          </>
+                        )}
 
                         <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
                           Analysis complete!
