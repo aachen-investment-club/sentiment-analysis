@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException 
 from typing import List, Dict, Any, Optional
 import pandas as pd
+from datetime import datetime, date
 from backend.api.utils import transform_dynamodb_item
 from pydantic import BaseModel
 from backend.aws_querying.DocumentData import (get_articles_s3, 
@@ -8,6 +9,8 @@ from backend.aws_querying.DocumentData import (get_articles_s3,
                                                get_sentiment_analysis_aws,
                                                check_exists_article_sentiment_analysis, 
                                                add_article_sentiment_analysis, get_document_labels )
+from backend.yfinance_querying.yfinance_querying import get_asset
+from backend.config import constants as const
 router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
 
@@ -201,6 +204,68 @@ async def get_progression_data(articles: List[ArticleMeta] ):
     }
 
 
+
+
+@router.get("/vix")
+async def get_vix_data(start_date: Optional[str] = None):
+    """
+    Fetch VIX data from yfinance.
+    
+    Args:
+        start_date: Optional start date in YYYY-MM-DD format. If not provided, defaults to 2025-01-01.
+    
+    Returns:
+        Dictionary with dates and VIX values as lists.
+    """
+    try:
+        if start_date:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+        else:
+            start_date_obj = date(2025, 1, 1)
+        
+        vix_data = get_asset(
+            asset=const.Asset.VIX.value,
+            start_date=start_date_obj,
+            granularity=const.Granularity.DAY_GRANULARITY
+        )
+        
+        # Ensure we have a pandas Series
+        if not isinstance(vix_data, pd.Series):
+            raise ValueError(f"Expected pandas Series, got {type(vix_data)}")
+        
+        # Convert index to datetime if needed
+        if not isinstance(vix_data.index, pd.DatetimeIndex):
+            vix_data.index = pd.to_datetime(vix_data.index)
+        
+        # Drop NaN values
+        vix_data = vix_data.dropna()
+        
+        # Check if we have any data
+        if len(vix_data) == 0:
+            return {
+                "dates": [],
+                "values": []
+            }
+        
+        # Convert index to string dates using pandas
+        dates = vix_data.index.strftime("%Y-%m-%d").tolist()
+        
+        # Convert values to list of floats
+        values = vix_data.astype(float).tolist()
+        
+        return {
+            "dates": dates,
+            "values": values
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch VIX data: {str(e)}\n{traceback.format_exc()}"
+        )
 
 
 @router.get("", response_model=List[Dict[str, Any]])
