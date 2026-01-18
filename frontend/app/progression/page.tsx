@@ -57,6 +57,24 @@ export default function ProgressionPage() {
   const [loadingVIX, setLoadingVIX] = useState(false);
   const [sentimentInterpretation, setSentimentInterpretation] = useState('');
   const [vixInterpretation, setVixInterpretation] = useState('');
+  const [loadingPDF, setLoadingPDF] = useState(false);
+  const [includedPlots, setIncludedPlots] = useState<Set<string>>(new Set());
+
+  // Cleanup includedPlots when plots are removed from exportData
+  useEffect(() => {
+    const availableTypes = new Set(exportData.map(item => item.type));
+    setIncludedPlots(prev => {
+      const newSet = new Set(prev);
+      let changed = false;
+      prev.forEach(type => {
+        if (!availableTypes.has(type)) {
+          newSet.delete(type);
+          changed = true;
+        }
+      });
+      return changed ? newSet : prev;
+    });
+  }, [exportData]);
 
   const handleUploadSuccess = () => {
     setUploadSuccess(true);
@@ -83,6 +101,8 @@ export default function ProgressionPage() {
       setShowSentimentPlot(false);
       setShowVIXAnalysis(false);
       setVixData(null);
+      setExportData([]);
+      setIncludedPlots(new Set());
     }
   };
 
@@ -129,9 +149,18 @@ export default function ProgressionPage() {
   };
 
 
-  // Auto-save sentiment progression to export data
+  // Add plot to export data when drawn (showSentimentPlot becomes true)
   useEffect(() => {
-    if (!analysisData || !showSentimentPlot) return;
+    if (!analysisData || !showSentimentPlot) {
+      // Remove plot when hidden
+      setExportData(prev => prev.filter(item => item.type !== 'sentiment_progression'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('sentiment_progression');
+        return newSet;
+      });
+      return;
+    }
     
     // Calculate metrics
     const avgSentiment = analysisData.sentiments.reduce((a, b) => a + b, 0) / analysisData.sentiments.length;
@@ -141,7 +170,7 @@ export default function ProgressionPage() {
     const exportItem = {
       type: 'sentiment_progression',
       title: 'Sentiment over time',
-      interpretation: sentimentInterpretation,
+      interpretation: sentimentInterpretation || '',
       metrics: [
         { label: 'Avg Sentiment', value: avgSentiment.toFixed(3) },
         { label: 'Documents', value: docCount.toString() },
@@ -156,11 +185,41 @@ export default function ProgressionPage() {
       const filtered = prev.filter(item => item.type !== 'sentiment_progression');
       return [...filtered, exportItem];
     });
-  }, [sentimentInterpretation, analysisData, showSentimentPlot]);
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('sentiment_progression')) {
+        const newSet = new Set(prev);
+        newSet.add('sentiment_progression');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [analysisData, showSentimentPlot]);
 
-  // Auto-save VIX analysis to export data
+  // Update interpretation when it changes
   useEffect(() => {
-    if (!analysisData || !vixData || !showVIXAnalysis) return;
+    if (!showSentimentPlot) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'sentiment_progression' 
+        ? { ...item, interpretation: sentimentInterpretation || '' }
+        : item
+    ));
+  }, [sentimentInterpretation, showSentimentPlot]);
+
+  // Add VIX plot to export data when drawn (showVIXAnalysis becomes true)
+  useEffect(() => {
+    if (!analysisData || !vixData || !showVIXAnalysis) {
+      // Remove plot when hidden
+      setExportData(prev => prev.filter(item => item.type !== 'sentiment_vix'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('sentiment_vix');
+        return newSet;
+      });
+      return;
+    }
     
     // Calculate metrics
     const avgSentiment = analysisData.sentiments.reduce((a, b) => a + b, 0) / analysisData.sentiments.length;
@@ -213,7 +272,7 @@ export default function ProgressionPage() {
     const exportItem = {
       type: 'sentiment_vix',
       title: 'Sentiment and VIX over time',
-      interpretation: vixInterpretation,
+      interpretation: vixInterpretation || '',
       metrics: [
         { label: 'Correlation', value: correlation.toFixed(3) },
         { label: 'Avg Sentiment', value: avgSentiment.toFixed(3) },
@@ -231,7 +290,28 @@ export default function ProgressionPage() {
       const filtered = prev.filter(item => item.type !== 'sentiment_vix');
       return [...filtered, exportItem];
     });
-  }, [vixInterpretation, analysisData, vixData, showVIXAnalysis]);
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('sentiment_vix')) {
+        const newSet = new Set(prev);
+        newSet.add('sentiment_vix');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [analysisData, vixData, showVIXAnalysis]);
+
+  // Update VIX interpretation when it changes
+  useEffect(() => {
+    if (!showVIXAnalysis) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'sentiment_vix' 
+        ? { ...item, interpretation: vixInterpretation || '' }
+        : item
+    ));
+  }, [vixInterpretation, showVIXAnalysis]);
 
   const handleDownloadPDF = async () => {
     if (exportData.length === 0) {
@@ -239,9 +319,18 @@ export default function ProgressionPage() {
       return;
     }
 
+    // Filter by included plots
+    const includedExportData = exportData.filter(item => includedPlots.has(item.type));
+    
+    if (includedExportData.length === 0) {
+      alert('No plots selected for export. Please select at least one plot.');
+      return;
+    }
+
+    setLoadingPDF(true);
     try {
       // Convert dates to strings for JSON serialization
-      const exportDataForAPI = exportData.map((item: any) => ({
+      const exportDataForAPI = includedExportData.map((item: any) => ({
         type: item.type,
         title: item.title,
         interpretation: item.interpretation || '',
@@ -285,6 +374,8 @@ export default function ProgressionPage() {
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoadingPDF(false);
     }
   };
 
@@ -431,7 +522,7 @@ export default function ProgressionPage() {
                             onClick={() => setShowSentimentPlot(!showSentimentPlot)}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                           >
-                            {showSentimentPlot ? 'Hide Sentiment Plot' : 'Show Sentiment Plot'}
+                            {showSentimentPlot ? 'Hide Sentiment Plot' : 'Draw Sentiment Plot'}
                           </button>
                         </div>
 
@@ -467,7 +558,7 @@ export default function ProgressionPage() {
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                             disabled={loadingVIX}
                           >
-                            {showVIXAnalysis ? 'Hide VIX Analysis' : 'Include VIX Analysis'}
+                            {showVIXAnalysis ? 'Hide VIX Analysis' : 'Draw VIX Analysis'}
                           </button>
                         </div>
 
@@ -569,23 +660,75 @@ export default function ProgressionPage() {
             title="Export Results"
             summary={
               exportData.length > 0
-                ? `${exportData.length} plot(s) ready for export`
+                ? `${includedPlots.size} of ${exportData.length} plot(s) selected for export`
                 : "Add plots with interpretations to export"
             }
           >
             <p className="text-gray-600 mb-4">
-              Download your analysis results as a PDF report. Make sure you have added plots with interpretations.
+              Download your analysis results as a PDF report. Select which plots to include.
             </p>
+            
+            {exportData.length > 0 && (
+              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Select Plots to Include:</h4>
+                <div className="space-y-2">
+                  {exportData.map((item) => (
+                    <div key={item.type} className="hover:bg-gray-100 p-2 rounded">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={includedPlots.has(item.type)}
+                          onChange={(e) => {
+                            setIncludedPlots(prev => {
+                              const newSet = new Set(prev);
+                              if (e.target.checked) {
+                                newSet.add(item.type);
+                              } else {
+                                newSet.delete(item.type);
+                              }
+                              return newSet;
+                            });
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700 flex-1">{item.title}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${includedPlots.has(item.type) ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                          {includedPlots.has(item.type) ? 'Included' : 'Excluded'}
+                        </span>
+                      </label>
+                      {!item.interpretation && (
+                        <p className="text-xs text-amber-600 mt-1 ml-7">
+                          No interpretation provided
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <button
               onClick={handleDownloadPDF}
-              disabled={exportData.length === 0}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={exportData.length === 0 || includedPlots.size === 0 || loadingPDF}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Download PDF
+              {loadingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                'Download PDF'
+              )}
             </button>
             {exportData.length === 0 && (
               <p className="text-sm text-gray-500 mt-2">
                 No data to export. Please add at least one plot with an interpretation.
+              </p>
+            )}
+            {exportData.length > 0 && includedPlots.size === 0 && (
+              <p className="text-sm text-amber-600 mt-2">
+                No plots selected. Please select at least one plot to export.
               </p>
             )}
           </CollapsibleSection>

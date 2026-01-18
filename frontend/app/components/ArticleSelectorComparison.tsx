@@ -52,8 +52,6 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
 
   // Filtered articles
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
-  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
   const [commitToggle, setCommitToggle] = useState(false);
 
   // Sync commitToggle with selectionCommitted prop
@@ -205,34 +203,6 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
     setFilteredArticles(uniqueArticles);
   }, [articles, startYear, startMonth, endYear, endMonth, selectedAssets, selectedMarkets, selectedCommodities]);
 
-  // Handle select all toggle
-  useEffect(() => {
-    if (selectAll) {
-      setSelectedArticles(new Set(filteredArticles.map(a => a.title)));
-    } else {
-      setSelectedArticles(new Set());
-    }
-  }, [selectAll, filteredArticles]);
-
-  // Update selectAll when individual selections change
-  useEffect(() => {
-    if (filteredArticles.length > 0) {
-      const allSelected = filteredArticles.every(article => selectedArticles.has(article.title));
-      setSelectAll(allSelected);
-    }
-  }, [selectedArticles, filteredArticles]);
-
-  const toggleArticleSelection = (title: string) => {
-    setSelectedArticles(prev => {
-      const next = new Set(prev);
-      if (next.has(title)) {
-        next.delete(title);
-      } else {
-        next.add(title);
-      }
-      return next;
-    });
-  };
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -245,18 +215,13 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
       return;
     }
 
-    const selected = filteredArticles.filter(article =>
-      selectedArticles.has(article.title)
-    );
-    
     const filterSelection: Filters = {
       "assets": selectedAssets, 
       "commodities": selectedCommodities, 
       "markets": selectedMarkets, 
     };
-    // If no articles are explicitly selected, use all filtered articles
-    const articlesToCommit = selected.length > 0 ? selected : filteredArticles;
-    onSelectionCommit(articlesToCommit, filterSelection);
+    // Always commit all filtered articles (automatic selection)
+    onSelectionCommit(filteredArticles, filterSelection);
     setCommitToggle(true);
   };
 
@@ -404,20 +369,14 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
       {/* Filtered Articles Display */}
       {startYear && startMonth && endYear && endMonth && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
               Found {filteredArticles.length} article(s)
             </h3>
             {filteredArticles.length > 0 && (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={(e) => setSelectAll(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Select All ({selectedArticles.size} selected)</span>
-              </label>
+              <p className="text-sm text-gray-600 mt-1">
+                All matching articles will be automatically selected for comparison.
+              </p>
             )}
           </div>
 
@@ -433,12 +392,6 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
                   className="border border-gray-200 bg-white rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedArticles.has(article.title)}
-                      onChange={() => toggleArticleSelection(article.title)}
-                      className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                    />
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1">
                         {article.title}
@@ -516,7 +469,7 @@ export default function ArticleSelectorComparison({ onSelectionCommit, onSelecti
                   Selection committed! You can now start the analysis.
                 </p>
                 <p className="text-xs text-green-700">
-                  {filteredArticles.filter(article => selectedArticles.has(article.title)).length || filteredArticles.length} article(s) selected
+                  {filteredArticles.length} article(s) selected
                 </p>
               </div>
               {onSelectionRevert && (
