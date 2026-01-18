@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException 
+from fastapi.responses import Response
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from datetime import datetime, date
@@ -11,6 +12,10 @@ from backend.aws_querying.DocumentData import (get_articles_s3,
                                                add_article_sentiment_analysis, get_document_labels )
 from backend.yfinance_querying.yfinance_querying import get_asset
 from backend.config import constants as const
+from backend.pdfoutput.pdf_creation import generate_pdf
+from backend.pdfoutput.pdf_components import PlotExport
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
 
@@ -291,4 +296,140 @@ async def get_articles():
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
+        )
+
+
+class MetricItem(BaseModel):
+    label: str
+    value: str
+
+
+class ExportItem(BaseModel):
+    type: str
+    title: str
+    interpretation: str
+    metrics: List[MetricItem]
+    dates: List[str]
+    sentiments: List[float]
+    vixDates: Optional[List[str]] = None
+    vixValues: Optional[List[float]] = None
+
+
+class PDFExportRequest(BaseModel):
+    exportData: List[ExportItem]
+
+
+@router.post("/export_pdf")
+async def export_pdf(request: PDFExportRequest):
+    """
+    Generate PDF from export data.
+    
+    Accepts export data with plot information and generates a PDF report.
+    """
+    try:
+        plot_exports = []
+        
+        for item in request.exportData:
+            # Convert metrics to tuple format expected by PlotExport
+            metrics = [(m.label, m.value) for m in item.metrics]
+            
+            # Create Plotly figure based on type
+            if item.type == 'sentiment_progression':
+                # Create sentiment progression plot
+                fig = go.Figure()
+                fig.add_trace(
+                    go.Scatter(
+                        x=item.dates,
+                        y=item.sentiments,
+                        mode="lines+markers",
+                        name="Sentiment"
+                    )
+                )
+                fig.update_layout(
+                    title="Sentiment progression over time",
+                    xaxis_title="Date",
+                    yaxis_title="Sentiment score",
+                    yaxis=dict(range=[-1, 1]),
+                    template="plotly_white"
+                )
+                
+            elif item.type == 'sentiment_vix':
+                # Create sentiment and VIX comparison plot
+                fig = make_subplots(specs=[[{"secondary_y": True}]])
+                
+                # Sentiment trace (primary axis)
+                fig.add_trace(
+                    go.Scatter(
+                        x=item.dates,
+                        y=item.sentiments,
+                        mode="lines+markers",
+                        name="Sentiment Score",
+                    ),
+                    secondary_y=False,
+                )
+                
+                # VIX trace (secondary axis)
+                if item.vixDates and item.vixValues:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=item.vixDates,
+                            y=item.vixValues,
+                            mode="lines",
+                            name="VIX",
+                            opacity=0.6,
+                        ),
+                        secondary_y=True,
+                    )
+                
+                fig.update_layout(
+                    title="Sentiment vs Market Volatility (VIX)",
+                    template="plotly_white",
+                    legend=dict(x=0.01, y=0.99),
+                )
+                
+                fig.update_yaxes(
+                    title_text="Sentiment Score",
+                    range=[-1, 1],
+                    secondary_y=False,
+                )
+                
+                fig.update_yaxes(
+                    title_text="VIX Level",
+                    secondary_y=True,
+                )
+                
+                fig.update_xaxes(title_text="Date")
+            else:
+                continue  # Skip unknown types
+            
+            # Remove annotations for cleaner export
+            fig.update_layout(annotations=[])
+            
+            # Create PlotExport object
+            plot_export = PlotExport(
+                title=item.title,
+                figure_bytes=fig,
+                metrics=metrics,
+                interpretation=item.interpretation
+            )
+            
+            plot_exports.append(plot_export)
+        
+        # Generate PDF
+        pdf_bytes = generate_pdf(plot_exports)
+        
+        # Return PDF as response
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=generated_report.pdf"
+            }
+        )
+        
+    except Exception as e:
+        import traceback
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate PDF: {str(e)}\n{traceback.format_exc()}"
         )

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
@@ -55,6 +55,8 @@ export default function ProgressionPage() {
   const [showExportToggle, setShowExportToggle] = useState(false);
   const [vixData, setVixData] = useState<{ dates: string[]; values: number[] } | null>(null);
   const [loadingVIX, setLoadingVIX] = useState(false);
+  const [sentimentInterpretation, setSentimentInterpretation] = useState('');
+  const [vixInterpretation, setVixInterpretation] = useState('');
 
   const handleUploadSuccess = () => {
     setUploadSuccess(true);
@@ -126,13 +128,164 @@ export default function ProgressionPage() {
     }
   };
 
-  const handleResetExportData = () => {
-    setExportData([]);
-  };
+
+  // Auto-save sentiment progression to export data
+  useEffect(() => {
+    if (!analysisData || !showSentimentPlot) return;
+    
+    // Calculate metrics
+    const avgSentiment = analysisData.sentiments.reduce((a, b) => a + b, 0) / analysisData.sentiments.length;
+    const docCount = analysisData.sentiments.length;
+    const sentimentLabel = avgSentiment > 0.1 ? "Positive" : avgSentiment < -0.1 ? "Negative" : "Neutral";
+    
+    const exportItem = {
+      type: 'sentiment_progression',
+      title: 'Sentiment over time',
+      interpretation: sentimentInterpretation,
+      metrics: [
+        { label: 'Avg Sentiment', value: avgSentiment.toFixed(3) },
+        { label: 'Documents', value: docCount.toString() },
+        { label: 'Overall', value: sentimentLabel },
+      ],
+      dates: analysisData.dates,
+      sentiments: analysisData.sentiments,
+    };
+    
+    // Update or add the export item (replace if exists, otherwise add)
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'sentiment_progression');
+      return [...filtered, exportItem];
+    });
+  }, [sentimentInterpretation, analysisData, showSentimentPlot]);
+
+  // Auto-save VIX analysis to export data
+  useEffect(() => {
+    if (!analysisData || !vixData || !showVIXAnalysis) return;
+    
+    // Calculate metrics
+    const avgSentiment = analysisData.sentiments.reduce((a, b) => a + b, 0) / analysisData.sentiments.length;
+    const docCount = analysisData.sentiments.length;
+    const sentimentLabel = avgSentiment > 0.1 ? "Positive" : avgSentiment < -0.1 ? "Negative" : "Neutral";
+    
+    // Calculate correlation
+    const sentimentDates = analysisData.dates.map(d => {
+      const date = d instanceof Date ? d : new Date(d);
+      return date.getTime();
+    });
+    const vixTimestamps = vixData.dates.map(d => new Date(d).getTime());
+    
+    // Align VIX data to sentiment dates using forward fill
+    const alignedVIX: number[] = [];
+    for (let i = 0; i < sentimentDates.length; i++) {
+      const sentimentTime = sentimentDates[i];
+      let vixValue = null;
+      for (let j = vixTimestamps.length - 1; j >= 0; j--) {
+        if (vixTimestamps[j] <= sentimentTime) {
+          vixValue = vixData.values[j];
+          break;
+        }
+      }
+      alignedVIX.push(vixValue !== null ? vixValue : 0);
+    }
+    
+    // Calculate Pearson correlation
+    const n = analysisData.sentiments.length;
+    const meanSentiment = avgSentiment;
+    const meanVIX = alignedVIX.reduce((a, b) => a + b, 0) / n;
+    
+    let numerator = 0;
+    let sumSqSentiment = 0;
+    let sumSqVIX = 0;
+    
+    for (let i = 0; i < n; i++) {
+      if (alignedVIX[i] !== null && alignedVIX[i] !== 0) {
+        const diffSentiment = analysisData.sentiments[i] - meanSentiment;
+        const diffVIX = alignedVIX[i] - meanVIX;
+        numerator += diffSentiment * diffVIX;
+        sumSqSentiment += diffSentiment * diffSentiment;
+        sumSqVIX += diffVIX * diffVIX;
+      }
+    }
+    
+    const denominator = Math.sqrt(sumSqSentiment * sumSqVIX);
+    const correlation = denominator === 0 ? 0 : numerator / denominator;
+    
+    const exportItem = {
+      type: 'sentiment_vix',
+      title: 'Sentiment and VIX over time',
+      interpretation: vixInterpretation,
+      metrics: [
+        { label: 'Correlation', value: correlation.toFixed(3) },
+        { label: 'Avg Sentiment', value: avgSentiment.toFixed(3) },
+        { label: 'Documents', value: docCount.toString() },
+        { label: 'Overall', value: sentimentLabel },
+      ],
+      dates: analysisData.dates,
+      sentiments: analysisData.sentiments,
+      vixDates: vixData.dates,
+      vixValues: vixData.values,
+    };
+    
+    // Update or add the export item (replace if exists, otherwise add)
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'sentiment_vix');
+      return [...filtered, exportItem];
+    });
+  }, [vixInterpretation, analysisData, vixData, showVIXAnalysis]);
 
   const handleDownloadPDF = async () => {
-    // TODO: Call API endpoint to generate PDF
-    alert('PDF generation will be implemented with backend API');
+    if (exportData.length === 0) {
+      alert('No data to export. Please add at least one plot with interpretation.');
+      return;
+    }
+
+    try {
+      // Convert dates to strings for JSON serialization
+      const exportDataForAPI = exportData.map((item: any) => ({
+        type: item.type,
+        title: item.title,
+        interpretation: item.interpretation || '',
+        metrics: item.metrics.map((m: { label: string; value: string }) => ({ label: m.label, value: m.value })),
+        dates: item.dates.map((d: string | Date) => {
+          if (d instanceof Date) {
+            return d.toISOString().slice(0, 10);
+          }
+          return typeof d === 'string' ? d : String(d);
+        }),
+        sentiments: item.sentiments,
+        ...(item.vixDates && { vixDates: item.vixDates }),
+        ...(item.vixValues && { vixValues: item.vixValues }),
+      }));
+
+      const response = await fetch('http://localhost:8000/api/sentiment/export_pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ exportData: exportDataForAPI }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate PDF: ${response.statusText}. ${errorText}`);
+      }
+
+      // Get PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sentiment_analysis_report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleFetchVIX = async () => {
@@ -283,11 +436,25 @@ export default function ProgressionPage() {
                         </div>
 
                         {showSentimentPlot && analysisData && (
-                          <SentimentProgression
-                            dates={analysisData.dates}
-                            sentiments={analysisData.sentiments}
-                          />
-
+                          <>
+                            <SentimentProgression
+                              dates={analysisData.dates}
+                              sentiments={analysisData.sentiments}
+                            />
+                            <div className="mt-4">
+                              <label htmlFor="sentiment-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                Enter an interpretation
+                              </label>
+                              <textarea
+                                id="sentiment-interpretation"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                rows={4}
+                                placeholder="Enter your interpretation of the sentiment progression..."
+                                value={sentimentInterpretation}
+                                onChange={(e) => setSentimentInterpretation(e.target.value)}
+                              />
+                            </div>
+                          </>
                         )}
 
                         <div className="border-t border-gray-300"></div>
@@ -317,12 +484,27 @@ export default function ProgressionPage() {
                                 </div>
                               </div>
                             ) : vixData && analysisData ? (
-                              <SentimentAndVIX
-                                dates={analysisData.dates}
-                                sentiments={analysisData.sentiments}
-                                vixDates={vixData.dates}
-                                vixValues={vixData.values}
-                              />
+                              <>
+                                <SentimentAndVIX
+                                  dates={analysisData.dates}
+                                  sentiments={analysisData.sentiments}
+                                  vixDates={vixData.dates}
+                                  vixValues={vixData.values}
+                                />
+                                <div className="mt-4">
+                                  <label htmlFor="vix-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="vix-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the sentiment and VIX comparison..."
+                                    value={vixInterpretation}
+                                    onChange={(e) => setVixInterpretation(e.target.value)}
+                                  />
+                                </div>
+                              </>
                             ) : (
                               <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-gray-600 mb-4">Failed to load VIX data</p>
@@ -385,11 +567,27 @@ export default function ProgressionPage() {
           {/* Export Step */}
           <CollapsibleSection
             title="Export Results"
-            summary="Click to export your analysis results as a PDF report"
+            summary={
+              exportData.length > 0
+                ? `${exportData.length} plot(s) ready for export`
+                : "Add plots with interpretations to export"
+            }
           >
             <p className="text-gray-600 mb-4">
-              Download your analysis results as a PDF report.
+              Download your analysis results as a PDF report. Make sure you have added plots with interpretations.
             </p>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={exportData.length === 0}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Download PDF
+            </button>
+            {exportData.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                No data to export. Please add at least one plot with an interpretation.
+              </p>
+            )}
           </CollapsibleSection>
 
         </div>
