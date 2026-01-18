@@ -1,5 +1,5 @@
 from fpdf import FPDF
-from config import constants as const
+from backend.config import constants as const
 from typing import List
 import plotly 
 import io 
