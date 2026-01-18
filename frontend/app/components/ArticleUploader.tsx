@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../lib/api';
 
 interface ArticleUploaderProps {
   onUploadSuccess?: () => void;
@@ -50,7 +51,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
   const fetchCategories = async () => {
     try{
       setLoading(true); 
-      const response = await fetch('http://localhost:8000/api/articles/categories')
+      const response = await fetch(`${API_BASE_URL}/api/articles/categories`)
 
       if (!response.ok){
         throw new Error(`Failed to fetch articles: ${response.statusText}`)
@@ -65,7 +66,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         }
       )
       
-      const response_sources = await fetch('http://localhost:8000/api/articles/sources')
+      const response_sources = await fetch(`${API_BASE_URL}/api/articles/sources`)
 
       const data_sources = await response_sources.json();
       setSources(data_sources);
@@ -135,7 +136,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
 
 
     
-    const response = await fetch("http://localhost:8000/api/articles/upload_article", {
+    const response = await fetch(`${API_BASE_URL}/api/articles/upload_article`, {
       method: "POST", 
       headers: {
       "Content-Type": "application/json",

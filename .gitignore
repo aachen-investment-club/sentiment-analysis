@@ -3,6 +3,8 @@
 /data
 __pycache__/
 .env
+.env.local
+/frontend/.env.local
 
 /prototyping/mock.py
 /prototyping/wikipedia_extractor.py

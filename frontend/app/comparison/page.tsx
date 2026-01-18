@@ -9,6 +9,7 @@ import CollapsibleSection from '../components/CollapsibleSection';
 import LinesCompare from '../components/LinesCompare';
 import BarsCompare from '../components/BarsCompare';
 import Footer from '../components/Footer';
+import { API_BASE_URL } from '../lib/api';
 
 interface Article {
   title: string;
@@ -163,7 +164,7 @@ export default function ComparisonPage() {
     setLoadingAnalysis(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/sentiment/compare_mode", {
+      const response = await fetch(`${API_BASE_URL}/api/sentiment/compare_mode`, {
         method: "POST", 
         headers: {
         "Content-Type": "application/json",
@@ -628,7 +629,7 @@ export default function ComparisonPage() {
         return convertedItem;
       });
 
-      const response = await fetch('http://localhost:8000/api/sentiment/export_pdf', {
+      const response = await fetch(`${API_BASE_URL}/api/sentiment/export_pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
