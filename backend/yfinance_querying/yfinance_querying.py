@@ -15,9 +15,19 @@ def get_asset(asset: const.Asset,start_date: dte,  granularity:const.Granularity
         ) 
 
     if granularity == const.Granularity.DAY_GRANULARITY: 
-        return output["Close"]
+        result = output["Close"]
+        
+        # Handle MultiIndex columns (yfinance returns MultiIndex for single ticker)
+        # If result is a DataFrame, squeeze it to a Series
+        if isinstance(result, pd.DataFrame):
+            result = result.squeeze()
+        
+        return result
      
-    return output["Close"].resample("M").mean()
+    close_data = output["Close"]
+    if isinstance(close_data, pd.DataFrame):
+        close_data = close_data.squeeze()
+    return close_data.resample("M").mean()
 
 
 def get_ticker_from_company_name(asset: str):
