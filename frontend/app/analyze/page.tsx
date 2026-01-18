@@ -6,6 +6,7 @@ import OverallSentiment from '../components/OverallSentiment';
 import DetailedSentimentBreakdown from '../components/DetailedSentimentBreakdown';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
+import Footer from '../components/Footer';
 
 interface AnalysisResult {
   overall_sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
@@ -99,6 +100,9 @@ export default function AnalyzePage() {
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer sidebarWidth={sidebarWidth} />
     </div>
   );
 }
