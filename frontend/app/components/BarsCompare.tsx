@@ -1,5 +1,10 @@
 'use client';
-import Plot from "react-plotly.js";
+
+import dynamic from 'next/dynamic';
+
+const Plot = dynamic(() => import('react-plotly.js').then((mod) => mod.default), {
+  ssr: false,
+});
 
 type SeriesPayload = {
   dates: (string | Date)[];

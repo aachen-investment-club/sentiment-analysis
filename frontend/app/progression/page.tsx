@@ -46,6 +46,7 @@ export default function ProgressionPage() {
 
   // Analysis step state
   const [startAnalysis, setStartAnalysis] = useState(false);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [showSentimentPlot, setShowSentimentPlot] = useState(false);
   const [showVIXAnalysis, setShowVIXAnalysis] = useState(false);
@@ -68,6 +69,21 @@ export default function ProgressionPage() {
     setSelectionCommitted(true);
   };
 
+  const handleSelectionRevert = () => {
+    setSelectedArticles([]);
+    setFilters({});
+    setSelectionCommitted(false);
+    // Also reset analysis state if analysis was started
+    if (startAnalysis) {
+      setStartAnalysis(false);
+      setAnalysisData(null);
+      setLoadingAnalysis(false);
+      setShowSentimentPlot(false);
+      setShowVIXAnalysis(false);
+      setVixData(null);
+    }
+  };
+
   const handleStartAnalysis = async () => {
     if (selectedArticles.length === 0) {
       alert('Please select at least one article');
@@ -75,31 +91,39 @@ export default function ProgressionPage() {
     }
 
     setStartAnalysis(true);
+    setLoadingAnalysis(true);
 
-    console.log(selectedArticles);
+    try {
+      console.log(selectedArticles);
 
-    const response = await fetch("http://localhost:8000/api/sentiment/start_analysis", {
-      method: "POST", 
-      headers: {
-      "Content-Type": "application/json",
-      }, 
-      body: JSON.stringify(
-        selectedArticles
-      )
-    })
+      const response = await fetch("http://localhost:8000/api/sentiment/start_analysis", {
+        method: "POST", 
+        headers: {
+        "Content-Type": "application/json",
+        }, 
+        body: JSON.stringify(
+          selectedArticles
+        )
+      })
 
-    if (!response.ok){
-      throw new Error(`Failed to fetch articles: ${response.statusText}`)
+      if (!response.ok){
+        throw new Error(`Failed to fetch articles: ${response.statusText}`)
+      }
+      const data = await response.json()
+      console.log(data.dates)
+      console.log(data.sentiments)
+      setAnalysisData(
+      {
+        dates: data.dates,
+        sentiments: data.sentiments,
+      }
+      );
+    } catch (error) {
+      console.error('Error starting analysis:', error);
+      alert('Failed to start analysis. Please try again.');
+    } finally {
+      setLoadingAnalysis(false);
     }
-    const data = await response.json()
-    console.log(data.dates)
-    console.log(data.sentiments)
-    setAnalysisData(
-    {
-      dates: data.dates,
-      sentiments: data.sentiments,
-    }
-    );
   };
 
   const handleResetExportData = () => {
@@ -204,6 +228,7 @@ export default function ProgressionPage() {
             
             <ArticleSelector
               onSelectionCommit={handleSelectionCommit}
+              onSelectionRevert={handleSelectionRevert}
               selectionCommitted={selectionCommitted}
             />
           </CollapsibleSection>
@@ -212,7 +237,9 @@ export default function ProgressionPage() {
           <CollapsibleSection
             title="Analysis"
             summary={
-              startAnalysis && analysisData
+              loadingAnalysis
+                ? "Running analysis..."
+                : startAnalysis && analysisData
                 ? "Analysis complete! Click to view results and visualizations"
                 : !selectionCommitted || selectedArticles.length === 0
                 ? "Select articles first to start analysis"
@@ -234,7 +261,15 @@ export default function ProgressionPage() {
                   </button>
                 ) : (
                   <div className="space-y-6">
-                    {analysisData && (
+                    {loadingAnalysis ? (
+                      <div className="bg-gray-50 rounded-lg p-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                          <p className="text-lg font-medium text-gray-700 mb-2">Running sentiment analysis...</p>
+                          <p className="text-sm text-gray-500">Please wait while we process your articles</p>
+                        </div>
+                      </div>
+                    ) : analysisData ? (
                       <>
                         {/* Sentiment Plot */}
                         <div className="mb-4">
@@ -304,32 +339,42 @@ export default function ProgressionPage() {
 
                         <div className="border-t border-gray-300"></div>
 
-                        {/* Sentiment vs Asset Comparison */}
-                        <div className="mb-4">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment vs Asset Comparison</h3>
-                          <button
-                            onClick={() => setShowSentimentVsAsset(!showSentimentVsAsset)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                          >
-                            {showSentimentVsAsset ? 'Hide Asset Comparison' : 'Compare Sentiment and Assets'}
-                          </button>
-                        </div>
-
-                        {showSentimentVsAsset && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            {/* TODO: Implement sentiment vs asset chart component */}
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              Sentiment vs Asset Chart Placeholder
+                        {/* Sentiment vs Asset Comparison - Disabled for now */}
+                        {false && (
+                          <>
+                            <div className="mb-4">
+                              <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment vs Asset Comparison</h3>
+                              <button
+                                onClick={() => setShowSentimentVsAsset(!showSentimentVsAsset)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                              >
+                                {showSentimentVsAsset ? 'Hide Asset Comparison' : 'Compare Sentiment and Assets'}
+                              </button>
                             </div>
-                          </div>
-                        )}
 
-                        <div className="border-t border-gray-300"></div>
+                            {showSentimentVsAsset && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
+                                  Sentiment vs Asset Chart Placeholder
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="border-t border-gray-300"></div>
+                          </>
+                        )}
 
                         <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
                           Analysis complete!
                         </div>
                       </>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="text-lg font-medium text-gray-700 mb-2">Analysis failed</p>
+                          <p className="text-sm text-gray-500">Please try starting the analysis again</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
