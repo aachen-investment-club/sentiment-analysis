@@ -17,6 +17,8 @@ nltk>=3.8.0
 spacy>=3.7.0
 # Note: After installing spacy, download the English model:
 # python -m spacy download en_core_web_sm
+# Language Detection
+langdetect>=1.0.9
 # ML Models
 transformers>=4.30.0
 torch>=2.0.0
