@@ -63,7 +63,7 @@ export default function LinesCompare({
       <div className="bg-white rounded border border-gray-200 p-3">
         <div className="flex items-baseline justify-between gap-3 mb-2">
           <div>
-            <p className="text-lg font-medium">Sentiment Over Time</p>
+            <p className="text-lg font-medium text-black">Sentiment Over Time</p>
             <p className="text-sm text-gray-500">
               Average sentiment per date — grouped by {category}
             </p>
