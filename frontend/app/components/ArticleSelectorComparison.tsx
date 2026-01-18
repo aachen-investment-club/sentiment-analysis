@@ -23,11 +23,12 @@ interface Filters {
 
 
 interface ArticleSelectorComparisonProps {
-  onStartAnalysis: (articles: Article[], filters: Filters) => void;
-  analysisStarted: boolean;
+  onSelectionCommit: (articles: Article[], filters: Filters) => void;
+  onSelectionRevert?: () => void;
+  selectionCommitted: boolean;
 }
 
-export default function ArticleSelectorComparison({ onStartAnalysis, analysisStarted }: ArticleSelectorComparisonProps) {
+export default function ArticleSelectorComparison({ onSelectionCommit, onSelectionRevert, selectionCommitted }: ArticleSelectorComparisonProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -53,6 +54,12 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [commitToggle, setCommitToggle] = useState(false);
+
+  // Sync commitToggle with selectionCommitted prop
+  useEffect(() => {
+    setCommitToggle(selectionCommitted);
+  }, [selectionCommitted]);
 
   // Fetch articles on mount
   useEffect(() => {
@@ -232,7 +239,7 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const handleStartAnalysis = () => {
+  const handleCommitSelection = () => {
     if (filteredArticles.length === 0) {
       alert('No articles found with the selected criteria!');
       return;
@@ -242,14 +249,15 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
       selectedArticles.has(article.title)
     );
     
-    const filterSelection:Filters= {
-      "assets":selectedAssets, 
-      "commodities":selectedCommodities, 
-      "markets":selectedMarkets, 
-    }
+    const filterSelection: Filters = {
+      "assets": selectedAssets, 
+      "commodities": selectedCommodities, 
+      "markets": selectedMarkets, 
+    };
     // If no articles are explicitly selected, use all filtered articles
-    const articlesToAnalyze = selected.length > 0 ? selected : filteredArticles;
-    onStartAnalysis(articlesToAnalyze, filterSelection);
+    const articlesToCommit = selected.length > 0 ? selected : filteredArticles;
+    onSelectionCommit(articlesToCommit, filterSelection);
+    setCommitToggle(true);
   };
 
   if (loading) {
@@ -498,16 +506,40 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
         </div>
       )}
 
-      {/* Start Analysis Button */}
+      {/* Commit Selection Button */}
       {filteredArticles.length > 0 && (
         <div className="pt-4 border-t border-gray-300">
-          <button
-            onClick={handleStartAnalysis}
-            disabled={analysisStarted}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {analysisStarted ? 'Analysis Started' : 'Start Analysis'}
-          </button>
+          {selectionCommitted ? (
+            <div className="space-y-3">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm font-medium text-green-800 mb-2">
+                  Selection committed! You can now start the analysis.
+                </p>
+                <p className="text-xs text-green-700">
+                  {filteredArticles.filter(article => selectedArticles.has(article.title)).length || filteredArticles.length} article(s) selected
+                </p>
+              </div>
+              {onSelectionRevert && (
+                <button
+                  onClick={() => {
+                    onSelectionRevert();
+                    setCommitToggle(false);
+                  }}
+                  className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Revert Selection
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={handleCommitSelection}
+              disabled={commitToggle}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Commit Selection
+            </button>
+          )}
         </div>
       )}
     </div>
