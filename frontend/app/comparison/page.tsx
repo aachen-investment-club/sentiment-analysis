@@ -65,9 +65,11 @@ export default function ComparisonPage() {
   // Selection step state
   const [selectedArticles, setSelectedArticles] = useState<Article[]>([]);
   const [filters, setFilters] = useState<Filters>({});
-  const [startAnalysis, setStartAnalysis] = useState(false);
+  const [selectionCommitted, setSelectionCommitted] = useState(false);
 
   // Analysis step state
+  const [startAnalysis, setStartAnalysis] = useState(false);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [articlesWithSentiment, setArticlesWithSentiment] = useState<Article[]>([]);
   const [showSentimentPlots, setShowSentimentPlots] = useState(false);
@@ -89,41 +91,70 @@ export default function ComparisonPage() {
     }, 3000);
   };
 
-  const handleStartAnalysis = async (articles: Article[], filterSelection: Filters) => {
-    if (articles.length === 0) {
+  const handleSelectionCommit = (articles: Article[], filterSelection: Filters) => {
+    setSelectedArticles(articles);
+    setFilters(filterSelection);
+    setSelectionCommitted(true);
+  };
+
+  const handleSelectionRevert = () => {
+    setSelectedArticles([]);
+    setFilters({});
+    setSelectionCommitted(false);
+    // Also reset analysis state if analysis was started
+    if (startAnalysis) {
+      setStartAnalysis(false);
+      setLoadingAnalysis(false);
+      setAnalysisComplete(false);
+      setCompareDataResponse(null);
+      setAssetCompareData(null);
+      setCommodityCompareData(null);
+      setMarketCompareData(null);
+      setShowSentimentPlots(false);
+    }
+  };
+
+  const handleStartAnalysis = async () => {
+    if (selectedArticles.length === 0) {
       alert('Please select at least one article');
       return;
     }
 
-    setSelectedArticles(articles);
-    setFilters(filterSelection);
-    setAnalysisComplete(true);
-
-    const response = await fetch("http://localhost:8000/api/sentiment/compare_mode", {
-      method: "POST", 
-      headers: {
-      "Content-Type": "application/json",
-      }, 
-      body: JSON.stringify(
-        {
-          articles: articles, 
-          filters: filterSelection
-        } 
-      )
-    })
-
-    if (!response.ok){
-      throw new Error(`Failed to fetch articles: ${response.statusText}`)
-    }
-    const data: CompareDataResponse = await response.json();
-    console.log(data);
-
-    setCompareDataResponse(data);
-    setAssetCompareData(data.assets);
-    setCommodityCompareData(data.commodities);
-    setMarketCompareData(data.markets);
-
     setStartAnalysis(true);
+    setLoadingAnalysis(true);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/sentiment/compare_mode", {
+        method: "POST", 
+        headers: {
+        "Content-Type": "application/json",
+        }, 
+        body: JSON.stringify(
+          {
+            articles: selectedArticles, 
+            filters: filters
+          } 
+        )
+      })
+
+      if (!response.ok){
+        throw new Error(`Failed to fetch articles: ${response.statusText}`)
+      }
+      const data: CompareDataResponse = await response.json();
+      console.log(data);
+
+      setCompareDataResponse(data);
+      setAssetCompareData(data.assets);
+      setCommodityCompareData(data.commodities);
+      setMarketCompareData(data.markets);
+
+      setAnalysisComplete(true);
+    } catch (error) {
+      console.error('Error starting analysis:', error);
+      alert('Failed to start analysis. Please try again.');
+    } finally {
+      setLoadingAnalysis(false);
+    }
   };
 
   const handleResetExportData = () => {
@@ -172,8 +203,8 @@ export default function ComparisonPage() {
           <CollapsibleSection
             title="Select Articles for Comparison"
             summary={
-              startAnalysis && selectedArticles.length > 0
-                ? `${selectedArticles.length} article(s) selected for comparison`
+              selectionCommitted && selectedArticles.length > 0
+                ? `${selectedArticles.length} article(s) selected and committed`
                 : "Choose articles by selecting a date range and optionally applying filters"
             }
           >
@@ -182,151 +213,167 @@ export default function ComparisonPage() {
             </p>
             
             <ArticleSelectorComparison
-              onStartAnalysis={handleStartAnalysis}
-              analysisStarted={startAnalysis}
+              onSelectionCommit={handleSelectionCommit}
+              onSelectionRevert={handleSelectionRevert}
+              selectionCommitted={selectionCommitted}
             />
           </CollapsibleSection>
 
           {/* Analysis Step */}
           <CollapsibleSection
-            title="Analysis Results"
+            title="Analysis"
             summary={
-              analysisComplete
-                ? "Analysis complete! Click to view results and visualizations"
-                : startAnalysis
+              loadingAnalysis
                 ? "Running analysis..."
-                : "Start analysis to view results"
+                : analysisComplete
+                ? "Analysis complete! Click to view results and visualizations"
+                : !selectionCommitted || selectedArticles.length === 0
+                ? "Select articles first to start analysis"
+                : "Click to start sentiment analysis"
             }
           >
-            {!startAnalysis ? (
+            {!selectionCommitted || selectedArticles.length === 0 ? (
               <div className="p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md">
-                Please select articles and start analysis to view results.
+                Please select and commit articles before starting the analysis.
               </div>
             ) : (
               <div>
-                {!analysisComplete ? (
-                  <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md">
-                    Running sentiment analysis...
-                  </div>
+                {!startAnalysis ? (
+                  <button
+                    onClick={handleStartAnalysis}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Start Analysis
+                  </button>
                 ) : (
                   <div className="space-y-6">
-                    <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
-                      Analysis complete!
-                    </div>
-
-                    {/* Show active filters if any */}
-                    {filters && Object.keys(filters).length > 0 && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                        <p className="text-sm font-semibold text-blue-900 mb-2">Comparison Filters:</p>
-                        <ul className="text-sm text-blue-800 space-y-1">
-                          {filters.assets && filters.assets.length > 0 && (
-                            <li>• Assets: {filters.assets.join(', ')}</li>
-                          )}
-                          {filters.markets && filters.markets.length > 0 && (
-                            <li>• Markets: {filters.markets.join(', ')}</li>
-                          )}
-                          {filters.commodities && filters.commodities.length > 0 && (
-                            <li>• Commodities: {filters.commodities.join(', ')}</li>
-                          )}
-                        </ul>
+                    {loadingAnalysis ? (
+                      <div className="bg-gray-50 rounded-lg p-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                          <p className="text-lg font-medium text-gray-700 mb-2">Running sentiment analysis...</p>
+                          <p className="text-sm text-gray-500">Please wait while we process your articles</p>
+                        </div>
                       </div>
-                    )}
+                    ) : analysisComplete ? (
+                      <>
+                        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
+                          Analysis complete!
+                        </div>
 
-                    {/* Sentiment Plots */}
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment Comparison Visualizations</h3>
-                      <button
-                        onClick={() => setShowSentimentPlots(!showSentimentPlots)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        {showSentimentPlots ? 'Hide Sentiment Plots' : 'Draw Sentiment Plots'}
-                      </button>
-                    </div>
+                        {/* Show active filters if any */}
+                        {filters && Object.keys(filters).length > 0 && (
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-sm font-semibold text-blue-900 mb-2">Comparison Filters:</p>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                              {filters.assets && filters.assets.length > 0 && (
+                                <li>• Assets: {filters.assets.join(', ')}</li>
+                              )}
+                              {filters.markets && filters.markets.length > 0 && (
+                                <li>• Markets: {filters.markets.join(', ')}</li>
+                              )}
+                              {filters.commodities && filters.commodities.length > 0 && (
+                                <li>• Commodities: {filters.commodities.join(', ')}</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
 
-                    {showSentimentPlots && (
-                      <div className="space-y-6">
-                        {/* Sentiment by Assets - Time Series */}
-                        {filters?.assets && filters.assets.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Assets - Time Series</h4>
-                              <div className="text-center">
+                        {/* Sentiment Plots */}
+                        <div className="mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-3">Sentiment Comparison Visualizations</h3>
+                          <button
+                            onClick={() => setShowSentimentPlots(!showSentimentPlots)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          >
+                            {showSentimentPlots ? 'Hide Sentiment Plots' : 'Draw Sentiment Plots'}
+                          </button>
+                        </div>
 
+                        {showSentimentPlots && (
+                          <div className="space-y-6">
+                            {/* Sentiment by Assets - Time Series */}
+                            {filters?.assets && filters.assets.length > 0 && assetCompareData && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Assets - Time Series</h4>
                                 <LinesCompare
                                   category="Assets"
                                   analysisData={assetCompareData}
                                 />
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Sentiment by Markets - Time Series */}
-                        {filters?.markets && filters.markets.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Markets - Time Series</h4>
-                              <div className="text-center">
-                               
+                            {/* Sentiment by Markets - Time Series */}
+                            {filters?.markets && filters.markets.length > 0 && marketCompareData && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Markets - Time Series</h4>
                                 <LinesCompare
                                   category="Markets"
                                   analysisData={marketCompareData}
                                 />
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Sentiment by Commodities - Time Series */}
-                        {filters?.commodities && filters.commodities.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Commodities - Time Series</h4>
-                              <div className="text-center">
-
+                            {/* Sentiment by Commodities - Time Series */}
+                            {filters?.commodities && filters.commodities.length > 0 && commodityCompareData && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Sentiment by Commodities - Time Series</h4>
                                 <LinesCompare
                                   category="Commodities"
                                   analysisData={commodityCompareData}
                                 />
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Average Sentiment Comparison - Assets */}
-                        {filters?.assets && filters.assets.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Assets</h4>
-                              <div className="text-center">
-                                <BarsCompare category="Assets" analysisData={assetCompareData ?? {}} />
+                            {/* Average Sentiment Comparison - Assets */}
+                            {filters?.assets && filters.assets.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Assets</h4>
+                                <div className="text-center">
+                                  <BarsCompare category="Assets" analysisData={assetCompareData ?? {}} />
+                                </div>
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Average Sentiment Comparison - Markets */}
-                        {filters?.markets && filters.markets.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Markets</h4>
-                              <div className="text-center">
-                                <BarsCompare category="Markets" analysisData={marketCompareData ?? {}} />
+                            {/* Average Sentiment Comparison - Markets */}
+                            {filters?.markets && filters.markets.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Markets</h4>
+                                <div className="text-center">
+                                  <BarsCompare category="Markets" analysisData={marketCompareData ?? {}} />
+                                </div>
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Average Sentiment Comparison - Commodities */}
-                        {filters?.commodities && filters.commodities.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Commodities</h4>
-                              <div className="text-center">
-                                <BarsCompare category="Commodities" analysisData={commodityCompareData ?? {}} />
+                            {/* Average Sentiment Comparison - Commodities */}
+                            {filters?.commodities && filters.commodities.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Commodities</h4>
+                                <div className="text-center">
+                                  <BarsCompare category="Commodities" analysisData={commodityCompareData ?? {}} />
+                                </div>
                               </div>
-                          </div>
-                        )}
+                            )}
 
-                        {/* Show message if no filters selected */}
-                        {(!filters || Object.keys(filters).length === 0) && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              <div className="text-center">
-                                <p className="text-sm">No filters selected. Select assets, markets, or commodities to see comparison charts.</p>
+                            {/* Show message if no filters selected */}
+                            {(!filters || Object.keys(filters).length === 0) && (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
+                                  <div className="text-center">
+                                    <p className="text-sm">No filters selected. Select assets, markets, or commodities to see comparison charts.</p>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         )}
+                      </>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="text-lg font-medium text-gray-700 mb-2">Analysis failed</p>
+                          <p className="text-sm text-gray-500">Please try starting the analysis again</p>
+                        </div>
                       </div>
                     )}
                   </div>
