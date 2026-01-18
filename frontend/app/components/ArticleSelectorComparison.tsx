@@ -11,6 +11,8 @@ interface Article {
   commodities: string[];
   markets: string[];
   DocumentID?: string;
+  file_name: string; 
+  language: string;
 }
 
 interface Filters {
@@ -19,12 +21,14 @@ interface Filters {
   commodities?: string[];
 }
 
+
 interface ArticleSelectorComparisonProps {
-  onStartAnalysis: (articles: Article[], filters: Filters) => void;
-  analysisStarted: boolean;
+  onSelectionCommit: (articles: Article[], filters: Filters) => void;
+  onSelectionRevert?: () => void;
+  selectionCommitted: boolean;
 }
 
-export default function ArticleSelectorComparison({ onStartAnalysis, analysisStarted }: ArticleSelectorComparisonProps) {
+export default function ArticleSelectorComparison({ onSelectionCommit, onSelectionRevert, selectionCommitted }: ArticleSelectorComparisonProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -48,8 +52,12 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
 
   // Filtered articles
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
-  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
+  const [commitToggle, setCommitToggle] = useState(false);
+
+  // Sync commitToggle with selectionCommitted prop
+  useEffect(() => {
+    setCommitToggle(selectionCommitted);
+  }, [selectionCommitted]);
 
   // Fetch articles on mount
   useEffect(() => {
@@ -78,6 +86,8 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
         assets: Array.isArray(item.assets) ? item.assets : [],
         commodities: Array.isArray(item.commodities) ? item.commodities : [],
         markets: Array.isArray(item.markets) ? item.markets : [],
+        file_name: item.file_name || '',
+        language: item.language || '',
       }));
       
       setArticles(transformedArticles);
@@ -193,50 +203,26 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
     setFilteredArticles(uniqueArticles);
   }, [articles, startYear, startMonth, endYear, endMonth, selectedAssets, selectedMarkets, selectedCommodities]);
 
-  // Handle select all toggle
-  useEffect(() => {
-    if (selectAll) {
-      setSelectedArticles(new Set(filteredArticles.map(a => a.title)));
-    } else {
-      setSelectedArticles(new Set());
-    }
-  }, [selectAll, filteredArticles]);
-
-  const toggleArticleSelection = (title: string) => {
-    setSelectedArticles(prev => {
-      const next = new Set(prev);
-      if (next.has(title)) {
-        next.delete(title);
-      } else {
-        next.add(title);
-      }
-      return next;
-    });
-  };
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const handleStartAnalysis = () => {
+  const handleCommitSelection = () => {
     if (filteredArticles.length === 0) {
       alert('No articles found with the selected criteria!');
       return;
     }
 
-    const selected = filteredArticles.filter(article =>
-      selectedArticles.has(article.title)
-    );
-    
-    const filters: Filters = {};
-    if (selectedAssets.length > 0) filters.assets = selectedAssets;
-    if (selectedMarkets.length > 0) filters.markets = selectedMarkets;
-    if (selectedCommodities.length > 0) filters.commodities = selectedCommodities;
-
-    // If no articles are explicitly selected, use all filtered articles
-    const articlesToAnalyze = selected.length > 0 ? selected : filteredArticles;
-    onStartAnalysis(articlesToAnalyze, filters);
+    const filterSelection: Filters = {
+      "assets": selectedAssets, 
+      "commodities": selectedCommodities, 
+      "markets": selectedMarkets, 
+    };
+    // Always commit all filtered articles (automatic selection)
+    onSelectionCommit(filteredArticles, filterSelection);
+    setCommitToggle(true);
   };
 
   if (loading) {
@@ -330,14 +316,14 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
 
       {/* Optional Filters */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Filters (optional)</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Filters (select at least one)</h3>
         <p className="text-sm text-gray-600 mb-4">
           Articles matching any selected filter category will be included.
         </p>
 
         <div className="space-y-4">
           <MultiSelectDropdown
-            label="Select assets to compare (optional)"
+            label="Select assets to compare"
             options={availableAssets}
             selected={selectedAssets}
             onChange={setSelectedAssets}
@@ -345,7 +331,7 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
           />
 
           <MultiSelectDropdown
-            label="Select markets to compare (optional)"
+            label="Select markets to compare"
             options={availableMarkets}
             selected={selectedMarkets}
             onChange={setSelectedMarkets}
@@ -353,7 +339,7 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
           />
 
           <MultiSelectDropdown
-            label="Select commodities to compare (optional)"
+            label="Select commodities to compare"
             options={availableCommodities}
             selected={selectedCommodities}
             onChange={setSelectedCommodities}
@@ -383,20 +369,14 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
       {/* Filtered Articles Display */}
       {startYear && startMonth && endYear && endMonth && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
               Found {filteredArticles.length} article(s)
             </h3>
             {filteredArticles.length > 0 && (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={(e) => setSelectAll(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Select all filtered articles</span>
-              </label>
+              <p className="text-sm text-gray-600 mt-1">
+                All matching articles will be automatically selected for comparison.
+              </p>
             )}
           </div>
 
@@ -409,28 +389,23 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
               {filteredArticles.map((article, index) => (
                 <div
                   key={article.DocumentID || index}
-                  className={`border rounded-lg p-4 transition-colors ${
-                    selectedArticles.has(article.title)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
+                  className="border border-gray-200 bg-white rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedArticles.has(article.title)}
-                      onChange={() => toggleArticleSelection(article.title)}
-                      className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                    />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">{article.title}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        {article.title}
+                      </h4>
+
                       <div className="text-sm text-gray-600 space-y-1">
                         <p>Date: {article.date}</p>
                         <p>Source: {article.source}</p>
-                        
-                        {article.assets && article.assets.length > 0 && (
+
+                        {article.assets?.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-xs font-medium text-gray-700">Assets:</span>
+                            <span className="text-xs font-medium text-gray-700">
+                              Assets:
+                            </span>
                             {article.assets.map(asset => (
                               <span
                                 key={asset}
@@ -442,9 +417,11 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
                           </div>
                         )}
 
-                        {article.commodities && article.commodities.length > 0 && (
+                        {article.commodities?.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-xs font-medium text-gray-700">Commodities:</span>
+                            <span className="text-xs font-medium text-gray-700">
+                              Commodities:
+                            </span>
                             {article.commodities.map(commodity => (
                               <span
                                 key={commodity}
@@ -456,9 +433,11 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
                           </div>
                         )}
 
-                        {article.markets && article.markets.length > 0 && (
+                        {article.markets?.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-xs font-medium text-gray-700">Markets:</span>
+                            <span className="text-xs font-medium text-gray-700">
+                              Markets:
+                            </span>
                             {article.markets.map(market => (
                               <span
                                 key={market}
@@ -476,19 +455,44 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
               ))}
             </div>
           )}
+
         </div>
       )}
 
-      {/* Start Analysis Button */}
+      {/* Commit Selection Button */}
       {filteredArticles.length > 0 && (
         <div className="pt-4 border-t border-gray-300">
-          <button
-            onClick={handleStartAnalysis}
-            disabled={analysisStarted}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {analysisStarted ? 'Analysis Started' : 'Start Analysis'}
-          </button>
+          {selectionCommitted ? (
+            <div className="space-y-3">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm font-medium text-green-800 mb-2">
+                  Selection committed! You can now start the analysis.
+                </p>
+                <p className="text-xs text-green-700">
+                  {filteredArticles.length} article(s) selected
+                </p>
+              </div>
+              {onSelectionRevert && (
+                <button
+                  onClick={() => {
+                    onSelectionRevert();
+                    setCommitToggle(false);
+                  }}
+                  className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Revert Selection
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={handleCommitSelection}
+              disabled={commitToggle}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Commit Selection
+            </button>
+          )}
         </div>
       )}
     </div>

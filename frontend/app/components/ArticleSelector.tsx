@@ -22,10 +22,11 @@ interface Filters {
 
 interface ArticleSelectorProps {
   onSelectionCommit: (articles: Article[], filters: Filters) => void;
+  onSelectionRevert?: () => void;
   selectionCommitted: boolean;
 }
 
-export default function ArticleSelector({ onSelectionCommit, selectionCommitted }: ArticleSelectorProps) {
+export default function ArticleSelector({ onSelectionCommit, onSelectionRevert, selectionCommitted }: ArticleSelectorProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -49,6 +50,11 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [commitToggle, setCommitToggle] = useState(false);
+
+  // Sync commitToggle with selectionCommitted prop
+  useEffect(() => {
+    setCommitToggle(selectionCommitted);
+  }, [selectionCommitted]);
 
   // Fetch articles on mount
   useEffect(() => {
@@ -451,27 +457,51 @@ export default function ArticleSelector({ onSelectionCommit, selectionCommitted 
       {/* Commit Selection Button */}
       {filteredArticles.length > 0 && (
         <div className="pt-4 border-t border-gray-300">
-          <button
-            onClick={() => {
-              const selected = filteredArticles.filter(article =>
-                selectedArticles.has(article.title)
-              );
-              
-              const filters: Filters = {};
-              if (selectedAssets.length > 0) filters.assets = selectedAssets;
-              if (selectedMarkets.length > 0) filters.markets = selectedMarkets;
-              if (selectedCommodities.length > 0) filters.commodities = selectedCommodities;
+          {selectionCommitted ? (
+            <div className="space-y-3">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm font-medium text-green-800 mb-2">
+                  Selection committed! You can now start the analysis.
+                </p>
+                <p className="text-xs text-green-700">
+                  {filteredArticles.filter(article => selectedArticles.has(article.title)).length || filteredArticles.length} article(s) selected
+                </p>
+              </div>
+              {onSelectionRevert && (
+                <button
+                  onClick={() => {
+                    onSelectionRevert();
+                    setCommitToggle(false);
+                  }}
+                  className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Revert Selection
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                const selected = filteredArticles.filter(article =>
+                  selectedArticles.has(article.title)
+                );
+                
+                const filters: Filters = {};
+                if (selectedAssets.length > 0) filters.assets = selectedAssets;
+                if (selectedMarkets.length > 0) filters.markets = selectedMarkets;
+                if (selectedCommodities.length > 0) filters.commodities = selectedCommodities;
 
-              // If no articles are explicitly selected, use all filtered articles
-              const articlesToCommit = selected.length > 0 ? selected : filteredArticles;
-              onSelectionCommit(articlesToCommit, filters);
-              setCommitToggle(true);
-            }}
-            disabled={commitToggle}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {commitToggle ? 'Selection Committed' : 'Commit Selection'}
-          </button>
+                // If no articles are explicitly selected, use all filtered articles
+                const articlesToCommit = selected.length > 0 ? selected : filteredArticles;
+                onSelectionCommit(articlesToCommit, filters);
+                setCommitToggle(true);
+              }}
+              disabled={commitToggle}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Commit Selection
+            </button>
+          )}
         </div>
       )}
     </div>

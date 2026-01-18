@@ -10,6 +10,8 @@ pdfplumber>=0.10.0  # Best for tables
 camelot-py[cv]>=0.11.0  # Advanced table extraction (optional)
 ghostscript>=0.7  # Required for camelot (optional)
 fpdf2>=2.7.0  # PDF generation
+plotly>=5.17.0  # Plot generation for PDF export
+kaleido>=0.2.1  # Static image export for Plotly
 openai>=1.0.0
 python-dotenv>=1.0.0  # For loading API keys from .env file
 # Text Processing
@@ -17,6 +19,8 @@ nltk>=3.8.0
 spacy>=3.7.0
 # Note: After installing spacy, download the English model:
 # python -m spacy download en_core_web_sm
+# Language Detection
+langdetect>=1.0.9
 # ML Models
 transformers>=4.30.0
 torch>=2.0.0
