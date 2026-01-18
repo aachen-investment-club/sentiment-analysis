@@ -309,10 +309,14 @@ class ExportItem(BaseModel):
     title: str
     interpretation: str
     metrics: List[MetricItem]
-    dates: List[str]
-    sentiments: List[float]
+    dates: Optional[List[str]] = None
+    sentiments: Optional[List[float]] = None
     vixDates: Optional[List[str]] = None
     vixValues: Optional[List[float]] = None
+    # For comparison plots
+    seriesData: Optional[Dict[str, Dict[str, Any]]] = None
+    averages: Optional[Dict[str, float]] = None
+    category: Optional[str] = None
 
 
 class PDFExportRequest(BaseModel):
@@ -399,6 +403,60 @@ async def export_pdf(request: PDFExportRequest):
                 )
                 
                 fig.update_xaxes(title_text="Date")
+            
+            elif item.type.startswith('compare_lines_'):
+                # Create comparison lines plot (time series with multiple series)
+                fig = go.Figure()
+                
+                if item.seriesData:
+                    for series_name, series_data in item.seriesData.items():
+                        dates = series_data.get('dates', [])
+                        sentiments = series_data.get('sentiments', [])
+                        
+                        fig.add_trace(
+                            go.Scatter(
+                                x=dates,
+                                y=sentiments,
+                                mode="lines+markers",
+                                name=series_name
+                            )
+                        )
+                
+                category = item.category or 'Items'
+                fig.update_layout(
+                    title=f"Sentiment by {category} - Time Series",
+                    xaxis_title="Date",
+                    yaxis_title="Sentiment score",
+                    yaxis=dict(range=[-1, 1]),
+                    template="plotly_white",
+                    legend=dict(orientation="h", x=0, y=-0.25)
+                )
+            
+            elif item.type.startswith('compare_bars_'):
+                # Create comparison bars plot (average sentiment comparison)
+                fig = go.Figure()
+                
+                if item.averages:
+                    labels = list(item.averages.keys())
+                    values = list(item.averages.values())
+                    
+                    fig.add_trace(
+                        go.Bar(
+                            x=labels,
+                            y=values,
+                            name="Average Sentiment"
+                        )
+                    )
+                
+                category = item.category or 'Items'
+                fig.update_layout(
+                    title=f"Average Sentiment Comparison - {category}",
+                    xaxis_title=category,
+                    yaxis_title="Average sentiment",
+                    yaxis=dict(range=[-1, 1]),
+                    template="plotly_white"
+                )
+            
             else:
                 continue  # Skip unknown types
             
