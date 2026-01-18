@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Plot from "react-plotly.js";
+import dynamic from 'next/dynamic';
+
+const Plot = dynamic(() => import('react-plotly.js').then((mod) => mod.default), {
+  ssr: false,
+});
 
 
 interface Filters {
