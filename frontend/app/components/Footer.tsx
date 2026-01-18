@@ -15,11 +15,9 @@ interface FooterProps {
 
 export default function Footer({ className = '', sidebarWidth = '' }: FooterProps) {
   const contributors: Contributor[] = [
-    { role: 'Developer Team Lead & Project Co-manager', name: 'Benjamin Oyarzun', linkedin: '#' },
+    { role: 'Developer Team Lead & Project Co-manager', name: 'Benjamin Oyarzun', linkedin: 'https://www.linkedin.com/in/benjam%C3%ADn-o-73634a22b/' },
     { role: 'Project Co-manager', name: 'Kevin Ha', linkedin: 'https://www.linkedin.com/in/kevin-ha-6a17aa333' },
-    { role: 'Contributor', name: '', linkedin: '#' },
-    { role: 'Contributor', name: '', linkedin: '#' },
-    { role: 'Contributor', name: '', linkedin: '#' },
+    { role: 'Contributor', name: 'Arash Mohamadpour', linkedin: 'https://www.linkedin.com/in/arash-mohamadpour-7b930b192/' },
   ];
 
   return (
