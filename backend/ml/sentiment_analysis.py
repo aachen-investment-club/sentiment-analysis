@@ -1,9 +1,6 @@
 import sys
 from pathlib import Path
 
-# Add project root to Python path to allow imports when running directly
-# Works for both: python -m backend.ml.sentiment_analysis (from project root)
-# and: python backend/ml/sentiment_analysis.py (from project root)
 _script_path = Path(__file__).resolve()
 _project_root = _script_path.parent.parent.parent
 if str(_project_root) not in sys.path:
@@ -43,18 +40,6 @@ def analyze_sentiment_regression_via_backend2(
     german: bool = False, 
     timeout_s: float = 30.0
 ) -> list[dict]:
-    """
-    Calls backend2 regression service.
-
-    Expected response:
-    {
-        "results": [
-            {"score": float, "sentence": str},
-            ...
-        ]
-    }
-    """
-
     if german: 
         language = "de"
     else: 
@@ -95,14 +80,9 @@ def sentiment_analysis_text(
     preprocessed_sentences = preprocess_text(text)
 
     if regression:
-        # ⚠️ IMPORTANT:
-        # Your backend2 returns German sentences,
-        # so DO NOT translate here unless backend2 expects English.
         if german:
             preprocessed_sentences = translate_to_english(preprocessed_sentences)
-            # ❗ Remove this line if backend2 expects German input
 
-        # 🔁 REPLACEMENT: call backend2 instead of local model
         results = analyze_sentiment_regression_via_backend2(
             preprocessed_sentences,
             german  
@@ -112,7 +92,6 @@ def sentiment_analysis_text(
 
         return average, overall_sentiment, confidence, results
 
-    # --- classification path unchanged ---
     if german:
         preprocessed_sentences = translate_to_english(preprocessed_sentences)
         _PIPELINE.model = _FINBERT_C
@@ -124,49 +103,6 @@ def sentiment_analysis_text(
     results = _PIPELINE(preprocessed_sentences)
     overall_sentiment, confidence = aggregate_sentiment(results)
     return overall_sentiment, confidence, results
-
-"""
-def sentiment_analysis_text(text: str, german: bool, regression: bool = False, normalize: bool = False) -> tuple[str, float, list[dict]]:
-    Analyze sentiment of text using FinBERT.
-    
-    Args:
-        text: Raw text to analyze
-        german: Whether the text is in German (will be translated to English)
-        regression: If True, use regression model (returns continuous scores)
-        normalize: If True and regression=True, normalize scores to better use [-1, 1] range
-        
-    Returns:
-        Tuple of (overall_sentiment_label, confidence, sentence_results)
-        - For regression: sentiment_label is "POSITIVE"/"NEGATIVE"/"NEUTRAL" based on average score
-        - For classification: sentiment_label is the dominant category
-    preprocessed_sentences = preprocess_text(text)  # Returns List[str]
-    
-    if regression:
-        # Use regression model - expects list of sentences
-        if german:
-            # Translate German sentences to English
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
-        
-        # Analyze using regression model
-        results = analyze_sentiment_regression(preprocessed_sentences, normalize=normalize)
-        average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
-        return average, overall_sentiment, confidence, results
-    else:
-        # Use classification model
-        if german:
-            # Translate German to English, then use English FinBERT model
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
-            _PIPELINE.model = _FINBERT_C
-            _PIPELINE.tokenizer = _TOKENIZER_C
-        else:
-            _PIPELINE.model = _FINBERT_C
-            _PIPELINE.tokenizer = _TOKENIZER_C
-        
-        results = _PIPELINE(preprocessed_sentences)
-        overall_sentiment, confidence = aggregate_sentiment(results)
-        return overall_sentiment, confidence, results
-
-"""
 
         
 
