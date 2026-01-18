@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 
 from backend_finbert.german_finbert import load_de_from_env, analyze_sentiment_regression_de
 from backend_finbert.english_finbert import load_en_from_env, analyze_sentiment_regression_en
-from backend.ml.preprocessing import preprocess_text
 
 
 
@@ -29,8 +28,8 @@ app = FastAPI(lifespan=lifespan)
 
 
 class PredictRequest(BaseModel):
+    sentences: List[str]
     language: str = Field(..., pattern="^(de|en)$")
-    text: str
 
 
 @app.get("/health")
@@ -46,7 +45,6 @@ def health():
 
 @app.post("/predict")
 def predict(req: PredictRequest) -> Dict:
-    sentences: List[str] = preprocess_text(req.text)
 
     if req.language == "de":
         if app.state.de_model is None or app.state.de_tokenizer is None:
@@ -55,7 +53,7 @@ def predict(req: PredictRequest) -> Dict:
         results = analyze_sentiment_regression_de(
             app.state.de_model,
             app.state.de_tokenizer,
-            sentences,
+            req.sentences,
             normalize=True,
         )
         return {"language": "de", "results": results}
@@ -67,7 +65,7 @@ def predict(req: PredictRequest) -> Dict:
         results = analyze_sentiment_regression_en(
             app.state.en_model,
             app.state.en_tokenizer,
-            sentences,
+            req.sentences,
             normalize=True,
         )
         return {"language": "en", "results": results}
