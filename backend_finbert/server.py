@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 from typing import Dict, List
 from contextlib import asynccontextmanager
 
-from backend_finbert.german_finbert import load_de_from_env, analyze_sentiment_regression_de
-from backend_finbert.english_finbert import load_en_from_env, analyze_sentiment_regression_en
+from german_finbert import load_de_from_env, analyze_sentiment_regression_de
+from english_finbert import load_en_from_env, analyze_sentiment_regression_en
 
 
 

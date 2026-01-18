@@ -5,6 +5,15 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
+import os
+from pathlib import Path
+from typing import Optional
+from dotenv import load_dotenv
+from huggingface_hub import snapshot_download
+
+
+load_dotenv()
+
 
 class EnglishRegressionFinBERTDistil(nn.Module):
     def __init__(
@@ -40,6 +49,52 @@ class EnglishRegressionFinBERTDistil(nn.Module):
                 p.requires_grad = True
 
 
+
+
+def ensure_en_hf_assets_local(
+    *,
+    force_download: bool = False,
+) -> str:
+    repo_id = os.getenv("EN_HF_REPO_ID", "").strip()
+    revision = os.getenv("EN_HF_REVISION", "main").strip() or None
+    token = os.getenv("HF_TOKEN", "").strip() or None
+
+    local_dir = os.getenv("EN_LOCAL_DIR", "")
+    local_dir_path = Path(local_dir)
+    local_dir_path.mkdir(parents=True, exist_ok=True)
+
+    if not repo_id:
+        return str(local_dir_path)
+
+    needs_download = force_download
+    if not needs_download:
+        key_candidates = [
+            local_dir_path / "config.json",
+            local_dir_path / "tokenizer.json",
+            local_dir_path / "tokenizer_config.json",
+            local_dir_path / "vocab.txt",
+            local_dir_path / "special_tokens_map.json",
+            local_dir_path / "pytorch_model.bin",
+        ]
+        needs_download = not any(p.exists() for p in key_candidates)
+
+    if needs_download:
+        snapshot_download(
+            repo_id=repo_id,
+            revision=revision,
+            token=token,
+            local_dir=str(local_dir_path),
+            local_dir_use_symlinks=False,  
+            force_download=force_download
+        )
+
+    return str(local_dir_path)
+
+
+
+
+
+
 def _split_state_dict(state: dict) -> Tuple[dict, dict]:
     base_sd, head_sd = {}, {}
     for k, v in state.items():
@@ -65,17 +120,13 @@ def load_checkpoint_into_model(model: EnglishRegressionFinBERTDistil, ckpt_path:
         model.out.load_state_dict(head_sd, strict=True)
 
 
+
 def load_en_from_env():
-   
+    local_dir = ensure_en_hf_assets_local()
+
     base_model_path = os.getenv("EN_BASE_MODEL_PATH", "distilbert/distilbert-base-uncased")
-    ckpt_path = os.getenv(
-        "EN_CKPT_PATH",
-        "./backend_finbert/regression_finance_finetune_english_bert_distil/pytorch_model.bin",
-    )
-    tokenizer_id = os.getenv(
-        "EN_TOKENIZER_ID",
-        "./backend_finbert/regression_finance_finetune_english_bert_distil",
-    )
+    ckpt_path = os.getenv("EN_CKPT_PATH", os.path.join(local_dir, "pytorch_model.bin"))
+    tokenizer_id = os.getenv("EN_TOKENIZER_ID", local_dir)
 
     torch_num_threads = int(os.getenv("TORCH_NUM_THREADS", "1"))
     torch.set_num_threads(torch_num_threads)
@@ -87,7 +138,6 @@ def load_en_from_env():
     model.eval()
 
     return model, tokenizer
-
 
 @torch.no_grad()
 def predict_en(model: EnglishRegressionFinBERTDistil, tokenizer, text: str, normalize: bool = False) -> float:
