@@ -7,6 +7,7 @@ import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelector from '../components/ArticleSelector';
 import CollapsibleSection from '../components/CollapsibleSection';
 import SentimentProgression from '../components/SentimentProgression';
+import SentimentAndVIX from '../components/SentimentAndVIX';
 
 interface Article {
   title: string;
@@ -51,6 +52,8 @@ export default function ProgressionPage() {
   const [showSentimentVsAsset, setShowSentimentVsAsset] = useState(false);
   const [exportData, setExportData] = useState<any[]>([]);
   const [showExportToggle, setShowExportToggle] = useState(false);
+  const [vixData, setVixData] = useState<{ dates: string[]; values: number[] } | null>(null);
+  const [loadingVIX, setLoadingVIX] = useState(false);
 
   const handleUploadSuccess = () => {
     setUploadSuccess(true);
@@ -108,6 +111,47 @@ export default function ProgressionPage() {
     alert('PDF generation will be implemented with backend API');
   };
 
+  const handleFetchVIX = async () => {
+    if (!analysisData || analysisData.dates.length === 0) {
+      return;
+    }
+
+    setLoadingVIX(true);
+    try {
+      // Get the earliest date from analysis data
+      const dates = analysisData.dates.map(d => {
+        if (d instanceof Date) return d;
+        return new Date(d);
+      });
+      const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const startDate = earliestDate.toISOString().slice(0, 10);
+
+      const response = await fetch(`http://localhost:8000/api/sentiment/vix?start_date=${startDate}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch VIX data: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setVixData(data);
+    } catch (error) {
+      console.error('Error fetching VIX data:', error);
+      alert('Failed to fetch VIX data. Please try again.');
+    } finally {
+      setLoadingVIX(false);
+    }
+  };
+
+  const handleToggleVIXAnalysis = () => {
+    const newValue = !showVIXAnalysis;
+    setShowVIXAnalysis(newValue);
+    
+    // Fetch VIX data when toggling on
+    if (newValue && !vixData && analysisData) {
+      handleFetchVIX();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
       {/* Sidebar */}
@@ -117,7 +161,7 @@ export default function ProgressionPage() {
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
         <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
           <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold text-black">
               Sentiment over time mode
             </h1>
             <p className="text-base sm:text-lg text-gray-600">
@@ -217,20 +261,44 @@ export default function ProgressionPage() {
                         <div className="mb-4">
                           <h3 className="text-lg font-semibold text-gray-800 mb-3">Market Volatility Comparison</h3>
                           <button
-                            onClick={() => setShowVIXAnalysis(!showVIXAnalysis)}
+                            onClick={handleToggleVIXAnalysis}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            disabled={loadingVIX}
                           >
                             {showVIXAnalysis ? 'Hide VIX Analysis' : 'Include VIX Analysis'}
                           </button>
                         </div>
 
                         {showVIXAnalysis && (
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-gray-600 mb-4">Fetching VIX data...</p>
-                            {/* TODO: Implement VIX chart component */}
-                            <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
-                              VIX Chart Placeholder
-                            </div>
+                          <div>
+                            {loadingVIX ? (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <p className="text-gray-600 mb-4">Fetching VIX data...</p>
+                                <div className="h-64 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400">
+                                  <div className="text-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    <p>Loading VIX data...</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : vixData && analysisData ? (
+                              <SentimentAndVIX
+                                dates={analysisData.dates}
+                                sentiments={analysisData.sentiments}
+                                vixDates={vixData.dates}
+                                vixValues={vixData.values}
+                              />
+                            ) : (
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <p className="text-gray-600 mb-4">Failed to load VIX data</p>
+                                <button
+                                  onClick={handleFetchVIX}
+                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                >
+                                  Retry
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
 
