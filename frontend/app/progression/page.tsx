@@ -8,6 +8,7 @@ import ArticleSelector from '../components/ArticleSelector';
 import CollapsibleSection from '../components/CollapsibleSection';
 import SentimentProgression from '../components/SentimentProgression';
 import SentimentAndVIX from '../components/SentimentAndVIX';
+import Footer from '../components/Footer';
 
 interface Article {
   title: string;
@@ -735,6 +736,9 @@ export default function ProgressionPage() {
 
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer sidebarWidth={sidebarWidth} />
     </div>
   );
 }
