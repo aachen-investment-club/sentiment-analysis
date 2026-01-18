@@ -45,7 +45,7 @@ export default function BarsCompare({ category, analysisData, items }: BarsCompa
       <div className="bg-white rounded border border-gray-200 p-3">
         <div className="flex items-baseline justify-between gap-3 mb-2">
           <div>
-            <p className="text-lg font-medium">Average Sentiment Comparison</p>
+            <p className="text-lg font-medium text-black">Average Sentiment Comparison</p>
             <p className="text-sm text-gray-500">
               Mean sentiment — grouped by {category}
             </p>
