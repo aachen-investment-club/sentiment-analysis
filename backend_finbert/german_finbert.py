@@ -13,7 +13,7 @@ from huggingface_hub import snapshot_download
 
 from pathlib import Path
 
-load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
+#load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 
 class GermanRegressionFinBERTDistil(nn.Module):
@@ -96,8 +96,8 @@ def ensure_de_hf_assets_local(force_download: bool = False) -> tuple[str, str]:
 
     #base_local_dir = os.getenv("DE_BASE_MODEL_PATH", "./backend_finbert/distilbert-german-finance-mlm")
     #reg_local_dir = os.getenv("DE_REG_LOCAL_DIR", "./backend_finbert/regression_finance_finetune_gbert_distil")
-    base_local_dir = os.getenv("DE_BASE_MODEL_PATH", "")
-    reg_local_dir = os.getenv("DE_REG_LOCAL_DIR", "")
+    base_local_dir = os.getenv("DE_BASE_MODEL_PATH", "/tmp/de_base")
+    reg_local_dir = os.getenv("DE_REG_LOCAL_DIR", "/temp/de_reg")
 
     #base_repo = os.getenv("DE_BASE_HF_REPO_ID", "BenjaminOyarzun17/distilbert-german-finance-mlm").strip() or None
     #reg_repo = os.getenv("DE_REG_HF_REPO_ID", "BenjaminOyarzun17/Finance-Finetune-distil-GBert-Finetune-Regression").strip() or None
@@ -179,7 +179,8 @@ def load_de_from_env():
     ckpt_path = os.getenv("DE_CKPT_PATH", os.path.join(reg_local_dir, "pytorch_model.bin"))
 
     # Prefer loading tokenizer from the same local regression folder
-    tokenizer_id = os.getenv("DE_TOKENIZER_ID", reg_local_dir)
+    #tokenizer_id = os.getenv("DE_TOKENIZER_ID", reg_local_dir)
+    tokenizer_id = os.getenv("DE_TOKENIZER_ID", base_local_dir)
 
     torch_num_threads = int(os.getenv("TORCH_NUM_THREADS", "1"))
     torch.set_num_threads(torch_num_threads)
