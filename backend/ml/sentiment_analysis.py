@@ -16,6 +16,11 @@ from transformers import BertTokenizer, BertForSequenceClassification, pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import defaultdict
 import spacy
+import requests
+from dotenv import load_dotenv
+import os
+
+load_dotenv
 
 _MODEL_NAME = "yiyanghkust/finbert-tone"
 _FINBERT_C = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
@@ -29,8 +34,93 @@ _TOKENIZER_DE = AutoTokenizer.from_pretrained('scherrmann/GermanFinBert_SC_Senti
 
 _PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZER_R)
 
-def sentiment_analysis_text(text: str, german: bool, regression: bool = False, normalize: bool = False) -> tuple[str, float, list[dict]]:
+
+BACKEND2_URL = os.environ.get("FINBERT_URL")
+
+def analyze_sentiment_regression_via_backend2(
+    sentences: list[str],
+    normalize: bool = False,
+    timeout_s: float = 30.0,
+) -> list[dict]:
     """
+    Calls backend2 regression service.
+
+    Expected response:
+    {
+        "results": [
+            {"score": float, "sentence": str},
+            ...
+        ]
+    }
+    """
+    payload = {
+        "sentences": sentences,
+        "normalize": normalize,
+    }
+
+    response = requests.post(
+        f"{BACKEND2_URL}/sentiment/regression",
+        json=payload,
+        timeout=timeout_s,
+    )
+
+    response.raise_for_status()
+    data = response.json()
+
+    if "results" not in data or not isinstance(data["results"], list):
+        raise RuntimeError(f"Invalid response from backend2: {data}")
+
+    # Coerce types defensively
+    return [
+        {
+            "score": float(item["score"]),
+            "sentence": str(item["sentence"]),
+        }
+        for item in data["results"]
+    ]
+
+
+def sentiment_analysis_text(
+    text: str,
+    german: bool,
+    regression: bool = False,
+    normalize: bool = False,
+):
+    preprocessed_sentences = preprocess_text(text)
+
+    if regression:
+        # ⚠️ IMPORTANT:
+        # Your backend2 returns German sentences,
+        # so DO NOT translate here unless backend2 expects English.
+        if german:
+            preprocessed_sentences = translate_to_english(preprocessed_sentences)
+            # ❗ Remove this line if backend2 expects German input
+
+        # 🔁 REPLACEMENT: call backend2 instead of local model
+        results = analyze_sentiment_regression_via_backend2(
+            preprocessed_sentences,
+            normalize=normalize,
+        )
+
+        average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
+
+        return average, overall_sentiment, confidence, results
+
+    # --- classification path unchanged ---
+    if german:
+        preprocessed_sentences = translate_to_english(preprocessed_sentences)
+        _PIPELINE.model = _FINBERT_C
+        _PIPELINE.tokenizer = _TOKENIZER_C
+    else:
+        _PIPELINE.model = _FINBERT_C
+        _PIPELINE.tokenizer = _TOKENIZER_C
+
+    results = _PIPELINE(preprocessed_sentences)
+    overall_sentiment, confidence = aggregate_sentiment(results)
+    return overall_sentiment, confidence, results
+
+"""
+def sentiment_analysis_text(text: str, german: bool, regression: bool = False, normalize: bool = False) -> tuple[str, float, list[dict]]:
     Analyze sentiment of text using FinBERT.
     
     Args:
@@ -43,7 +133,6 @@ def sentiment_analysis_text(text: str, german: bool, regression: bool = False, n
         Tuple of (overall_sentiment_label, confidence, sentence_results)
         - For regression: sentiment_label is "POSITIVE"/"NEGATIVE"/"NEUTRAL" based on average score
         - For classification: sentiment_label is the dominant category
-    """
     preprocessed_sentences = preprocess_text(text)  # Returns List[str]
     
     if regression:
@@ -70,6 +159,10 @@ def sentiment_analysis_text(text: str, german: bool, regression: bool = False, n
         results = _PIPELINE(preprocessed_sentences)
         overall_sentiment, confidence = aggregate_sentiment(results)
         return overall_sentiment, confidence, results
+
+"""
+
+        
 
 def sentiment_analysis_pdf(pdf_url: str, german: bool, regression: bool = False, normalize: bool = False) -> tuple[str, float, list[dict]]:
     """
