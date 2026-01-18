@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
@@ -83,6 +83,35 @@ export default function ComparisonPage() {
   const [commodityCompareData, setCommodityCompareData] = useState<CompareCategoryData | null>(null);
   const [marketCompareData, setMarketCompareData] = useState<CompareCategoryData | null>(null);
 
+  // Interpretation states for each plot type
+  const [assetLinesInterpretation, setAssetLinesInterpretation] = useState('');
+  const [marketLinesInterpretation, setMarketLinesInterpretation] = useState('');
+  const [commodityLinesInterpretation, setCommodityLinesInterpretation] = useState('');
+  const [assetBarsInterpretation, setAssetBarsInterpretation] = useState('');
+  const [marketBarsInterpretation, setMarketBarsInterpretation] = useState('');
+  const [commodityBarsInterpretation, setCommodityBarsInterpretation] = useState('');
+
+  // Export data state
+  const [exportData, setExportData] = useState<any[]>([]);
+  const [loadingPDF, setLoadingPDF] = useState(false);
+  const [includedPlots, setIncludedPlots] = useState<Set<string>>(new Set());
+
+
+  // Cleanup includedPlots when plots are removed from exportData
+  useEffect(() => {
+    const availableTypes = new Set(exportData.map(item => item.type));
+    setIncludedPlots(prev => {
+      const newSet = new Set(prev);
+      let changed = false;
+      prev.forEach(type => {
+        if (!availableTypes.has(type)) {
+          newSet.delete(type);
+          changed = true;
+        }
+      });
+      return changed ? newSet : prev;
+    });
+  }, [exportData]);
 
   const handleUploadSuccess =  () => {
     setUploadSuccess(true);
@@ -111,6 +140,15 @@ export default function ComparisonPage() {
       setCommodityCompareData(null);
       setMarketCompareData(null);
       setShowSentimentPlots(false);
+      // Reset interpretations
+      setAssetLinesInterpretation('');
+      setMarketLinesInterpretation('');
+      setCommodityLinesInterpretation('');
+      setAssetBarsInterpretation('');
+      setMarketBarsInterpretation('');
+      setCommodityBarsInterpretation('');
+      setExportData([]);
+      setIncludedPlots(new Set());
     }
   };
 
@@ -157,9 +195,469 @@ export default function ComparisonPage() {
     }
   };
 
-  const handleResetExportData = () => {
-    // TODO: Reset export data
-    console.log('Reset export data');
+  // Add asset lines plot to export data when drawn
+  useEffect(() => {
+    if (!assetCompareData || !showSentimentPlots || !filters?.assets || filters.assets.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_lines_assets'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_lines_assets');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    Object.keys(assetCompareData).forEach(key => {
+      seriesData[key] = {
+        dates: assetCompareData[key].dates,
+        sentiments: assetCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_lines_assets',
+      title: 'Sentiment by Assets - Time Series',
+      interpretation: assetLinesInterpretation || '',
+      metrics: [
+        { label: 'Assets', value: filters.assets.join(', ') },
+        { label: 'Series Count', value: Object.keys(assetCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      category: 'Assets',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_lines_assets');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_lines_assets')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_lines_assets');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [assetCompareData, showSentimentPlots, filters]);
+
+  // Update asset lines interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.assets || filters.assets.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_lines_assets' 
+        ? { ...item, interpretation: assetLinesInterpretation || '' }
+        : item
+    ));
+  }, [assetLinesInterpretation, showSentimentPlots, filters]);
+
+  // Add market lines plot to export data when drawn
+  useEffect(() => {
+    if (!marketCompareData || !showSentimentPlots || !filters?.markets || filters.markets.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_lines_markets'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_lines_markets');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    Object.keys(marketCompareData).forEach(key => {
+      seriesData[key] = {
+        dates: marketCompareData[key].dates,
+        sentiments: marketCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_lines_markets',
+      title: 'Sentiment by Markets - Time Series',
+      interpretation: marketLinesInterpretation || '',
+      metrics: [
+        { label: 'Markets', value: filters.markets.join(', ') },
+        { label: 'Series Count', value: Object.keys(marketCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      category: 'Markets',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_lines_markets');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_lines_markets')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_lines_markets');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [marketCompareData, showSentimentPlots, filters]);
+
+  // Update market lines interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.markets || filters.markets.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_lines_markets' 
+        ? { ...item, interpretation: marketLinesInterpretation || '' }
+        : item
+    ));
+  }, [marketLinesInterpretation, showSentimentPlots, filters]);
+
+  // Add commodity lines plot to export data when drawn
+  useEffect(() => {
+    if (!commodityCompareData || !showSentimentPlots || !filters?.commodities || filters.commodities.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_lines_commodities'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_lines_commodities');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    Object.keys(commodityCompareData).forEach(key => {
+      seriesData[key] = {
+        dates: commodityCompareData[key].dates,
+        sentiments: commodityCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_lines_commodities',
+      title: 'Sentiment by Commodities - Time Series',
+      interpretation: commodityLinesInterpretation || '',
+      metrics: [
+        { label: 'Commodities', value: filters.commodities.join(', ') },
+        { label: 'Series Count', value: Object.keys(commodityCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      category: 'Commodities',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_lines_commodities');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_lines_commodities')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_lines_commodities');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [commodityCompareData, showSentimentPlots, filters]);
+
+  // Update commodity lines interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.commodities || filters.commodities.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_lines_commodities' 
+        ? { ...item, interpretation: commodityLinesInterpretation || '' }
+        : item
+    ));
+  }, [commodityLinesInterpretation, showSentimentPlots, filters]);
+
+  // Add asset bars plot to export data when drawn
+  useEffect(() => {
+    if (!assetCompareData || !showSentimentPlots || !filters?.assets || filters.assets.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_bars_assets'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_bars_assets');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    const averages: { [key: string]: number } = {};
+    Object.keys(assetCompareData).forEach(key => {
+      const sentiments = assetCompareData[key].sentiments || [];
+      const avg = sentiments.length > 0 
+        ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length 
+        : 0;
+      averages[key] = avg;
+      seriesData[key] = {
+        dates: assetCompareData[key].dates,
+        sentiments: assetCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_bars_assets',
+      title: 'Average Sentiment Comparison - Assets',
+      interpretation: assetBarsInterpretation || '',
+      metrics: [
+        { label: 'Assets', value: filters.assets.join(', ') },
+        { label: 'Series Count', value: Object.keys(assetCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      averages: averages,
+      category: 'Assets',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_bars_assets');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_bars_assets')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_bars_assets');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [assetCompareData, showSentimentPlots, filters]);
+
+  // Update asset bars interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.assets || filters.assets.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_bars_assets' 
+        ? { ...item, interpretation: assetBarsInterpretation || '' }
+        : item
+    ));
+  }, [assetBarsInterpretation, showSentimentPlots, filters]);
+
+  // Add market bars plot to export data when drawn
+  useEffect(() => {
+    if (!marketCompareData || !showSentimentPlots || !filters?.markets || filters.markets.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_bars_markets'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_bars_markets');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    const averages: { [key: string]: number } = {};
+    Object.keys(marketCompareData).forEach(key => {
+      const sentiments = marketCompareData[key].sentiments || [];
+      const avg = sentiments.length > 0 
+        ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length 
+        : 0;
+      averages[key] = avg;
+      seriesData[key] = {
+        dates: marketCompareData[key].dates,
+        sentiments: marketCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_bars_markets',
+      title: 'Average Sentiment Comparison - Markets',
+      interpretation: marketBarsInterpretation || '',
+      metrics: [
+        { label: 'Markets', value: filters.markets.join(', ') },
+        { label: 'Series Count', value: Object.keys(marketCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      averages: averages,
+      category: 'Markets',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_bars_markets');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_bars_markets')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_bars_markets');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [marketCompareData, showSentimentPlots, filters]);
+
+  // Update market bars interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.markets || filters.markets.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_bars_markets' 
+        ? { ...item, interpretation: marketBarsInterpretation || '' }
+        : item
+    ));
+  }, [marketBarsInterpretation, showSentimentPlots, filters]);
+
+  // Add commodity bars plot to export data when drawn
+  useEffect(() => {
+    if (!commodityCompareData || !showSentimentPlots || !filters?.commodities || filters.commodities.length === 0) {
+      // Remove plot when hidden or data unavailable
+      setExportData(prev => prev.filter(item => item.type !== 'compare_bars_commodities'));
+      setIncludedPlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('compare_bars_commodities');
+        return newSet;
+      });
+      return;
+    }
+    
+    const seriesData: any = {};
+    const averages: { [key: string]: number } = {};
+    Object.keys(commodityCompareData).forEach(key => {
+      const sentiments = commodityCompareData[key].sentiments || [];
+      const avg = sentiments.length > 0 
+        ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length 
+        : 0;
+      averages[key] = avg;
+      seriesData[key] = {
+        dates: commodityCompareData[key].dates,
+        sentiments: commodityCompareData[key].sentiments
+      };
+    });
+
+    const exportItem = {
+      type: 'compare_bars_commodities',
+      title: 'Average Sentiment Comparison - Commodities',
+      interpretation: commodityBarsInterpretation || '',
+      metrics: [
+        { label: 'Commodities', value: filters.commodities.join(', ') },
+        { label: 'Series Count', value: Object.keys(commodityCompareData).length.toString() },
+      ],
+      seriesData: seriesData,
+      averages: averages,
+      category: 'Commodities',
+    };
+    
+    setExportData(prev => {
+      const filtered = prev.filter(item => item.type !== 'compare_bars_commodities');
+      return [...filtered, exportItem];
+    });
+    
+    // Auto-include new plots
+    setIncludedPlots(prev => {
+      if (!prev.has('compare_bars_commodities')) {
+        const newSet = new Set(prev);
+        newSet.add('compare_bars_commodities');
+        return newSet;
+      }
+      return prev;
+    });
+  }, [commodityCompareData, showSentimentPlots, filters]);
+
+  // Update commodity bars interpretation when it changes
+  useEffect(() => {
+    if (!showSentimentPlots || !filters?.commodities || filters.commodities.length === 0) return;
+    
+    setExportData(prev => prev.map(item => 
+      item.type === 'compare_bars_commodities' 
+        ? { ...item, interpretation: commodityBarsInterpretation || '' }
+        : item
+    ));
+  }, [commodityBarsInterpretation, showSentimentPlots, filters]);
+
+  const handleDownloadPDF = async () => {
+    if (exportData.length === 0) {
+      alert('No data to export. Please add at least one plot with interpretation.');
+      return;
+    }
+
+    // Filter by included plots
+    const includedExportData = exportData.filter(item => includedPlots.has(item.type));
+    
+    if (includedExportData.length === 0) {
+      alert('No plots selected for export. Please select at least one plot.');
+      return;
+    }
+
+    setLoadingPDF(true);
+    try {
+      // Convert data for API, ensuring dates are strings
+      const exportDataForAPI = includedExportData.map((item: any) => {
+        const convertedItem: any = {
+          type: item.type,
+          title: item.title,
+          interpretation: item.interpretation || '',
+          metrics: item.metrics.map((m: { label: string; value: string }) => ({ label: m.label, value: m.value })),
+          ...(item.category && { category: item.category }),
+        };
+
+        // Convert seriesData dates to strings if present
+        if (item.seriesData) {
+          const convertedSeriesData: any = {};
+          Object.keys(item.seriesData).forEach(key => {
+            convertedSeriesData[key] = {
+              dates: item.seriesData[key].dates.map((d: string | Date) => {
+                if (d instanceof Date) {
+                  return d.toISOString().slice(0, 10);
+                }
+                return typeof d === 'string' ? d : String(d);
+              }),
+              sentiments: item.seriesData[key].sentiments
+            };
+          });
+          convertedItem.seriesData = convertedSeriesData;
+        }
+
+        // Add averages if present
+        if (item.averages) {
+          convertedItem.averages = item.averages;
+        }
+
+        return convertedItem;
+      });
+
+      const response = await fetch('http://localhost:8000/api/sentiment/export_pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ exportData: exportDataForAPI }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate PDF: ${response.statusText}. ${errorText}`);
+      }
+
+      // Get PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sentiment_comparison_report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoadingPDF(false);
+    }
   };
 
   return (
@@ -300,6 +798,19 @@ export default function ComparisonPage() {
                                   category="Assets"
                                   analysisData={assetCompareData}
                                 />
+                                <div className="mt-4">
+                                  <label htmlFor="asset-lines-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="asset-lines-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the sentiment by assets over time..."
+                                    value={assetLinesInterpretation}
+                                    onChange={(e) => setAssetLinesInterpretation(e.target.value)}
+                                  />
+                                </div>
                               </div>
                             )}
 
@@ -311,6 +822,19 @@ export default function ComparisonPage() {
                                   category="Markets"
                                   analysisData={marketCompareData}
                                 />
+                                <div className="mt-4">
+                                  <label htmlFor="market-lines-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="market-lines-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the sentiment by markets over time..."
+                                    value={marketLinesInterpretation}
+                                    onChange={(e) => setMarketLinesInterpretation(e.target.value)}
+                                  />
+                                </div>
                               </div>
                             )}
 
@@ -322,6 +846,19 @@ export default function ComparisonPage() {
                                   category="Commodities"
                                   analysisData={commodityCompareData}
                                 />
+                                <div className="mt-4">
+                                  <label htmlFor="commodity-lines-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="commodity-lines-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the sentiment by commodities over time..."
+                                    value={commodityLinesInterpretation}
+                                    onChange={(e) => setCommodityLinesInterpretation(e.target.value)}
+                                  />
+                                </div>
                               </div>
                             )}
 
@@ -331,6 +868,19 @@ export default function ComparisonPage() {
                                 <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Assets</h4>
                                 <div className="text-center">
                                   <BarsCompare category="Assets" analysisData={assetCompareData ?? {}} />
+                                </div>
+                                <div className="mt-4">
+                                  <label htmlFor="asset-bars-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="asset-bars-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the average sentiment comparison for assets..."
+                                    value={assetBarsInterpretation}
+                                    onChange={(e) => setAssetBarsInterpretation(e.target.value)}
+                                  />
                                 </div>
                               </div>
                             )}
@@ -342,6 +892,19 @@ export default function ComparisonPage() {
                                 <div className="text-center">
                                   <BarsCompare category="Markets" analysisData={marketCompareData ?? {}} />
                                 </div>
+                                <div className="mt-4">
+                                  <label htmlFor="market-bars-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="market-bars-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the average sentiment comparison for markets..."
+                                    value={marketBarsInterpretation}
+                                    onChange={(e) => setMarketBarsInterpretation(e.target.value)}
+                                  />
+                                </div>
                               </div>
                             )}
 
@@ -351,6 +914,19 @@ export default function ComparisonPage() {
                                 <h4 className="text-md font-semibold text-gray-800 mb-3">Average Sentiment Comparison - Commodities</h4>
                                 <div className="text-center">
                                   <BarsCompare category="Commodities" analysisData={commodityCompareData ?? {}} />
+                                </div>
+                                <div className="mt-4">
+                                  <label htmlFor="commodity-bars-interpretation" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter an interpretation
+                                  </label>
+                                  <textarea
+                                    id="commodity-bars-interpretation"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                                    rows={4}
+                                    placeholder="Enter your interpretation of the average sentiment comparison for commodities..."
+                                    value={commodityBarsInterpretation}
+                                    onChange={(e) => setCommodityBarsInterpretation(e.target.value)}
+                                  />
                                 </div>
                               </div>
                             )}
@@ -385,11 +961,79 @@ export default function ComparisonPage() {
           {/* Export Step */}
           <CollapsibleSection
             title="Export Results"
-            summary="Click to export your analysis results as a PDF report"
+            summary={
+              exportData.length > 0
+                ? `${includedPlots.size} of ${exportData.length} plot(s) selected for export`
+                : "Add plots with interpretations to export"
+            }
           >
             <p className="text-gray-600 mb-4">
-              Download your analysis results as a PDF report.
+              Download your analysis results as a PDF report. Select which plots to include.
             </p>
+            
+            {exportData.length > 0 && (
+              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Select Plots to Include:</h4>
+                <div className="space-y-2">
+                  {exportData.map((item) => (
+                    <div key={item.type} className="hover:bg-gray-100 p-2 rounded">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={includedPlots.has(item.type)}
+                          onChange={(e) => {
+                            setIncludedPlots(prev => {
+                              const newSet = new Set(prev);
+                              if (e.target.checked) {
+                                newSet.add(item.type);
+                              } else {
+                                newSet.delete(item.type);
+                              }
+                              return newSet;
+                            });
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700 flex-1">{item.title}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${includedPlots.has(item.type) ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                          {includedPlots.has(item.type) ? 'Included' : 'Excluded'}
+                        </span>
+                      </label>
+                      {!item.interpretation && (
+                        <p className="text-xs text-amber-600 mt-1 ml-7">
+                          No interpretation provided
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <button
+              onClick={handleDownloadPDF}
+              disabled={exportData.length === 0 || includedPlots.size === 0 || loadingPDF}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loadingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                'Download PDF'
+              )}
+            </button>
+            {exportData.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                No data to export. Please add at least one plot with an interpretation.
+              </p>
+            )}
+            {exportData.length > 0 && includedPlots.size === 0 && (
+              <p className="text-sm text-amber-600 mt-2">
+                No plots selected. Please select at least one plot to export.
+              </p>
+            )}
           </CollapsibleSection>
 
         </div>
