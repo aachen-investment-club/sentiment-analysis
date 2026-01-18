@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './components/SidebarContext';
+import Footer from './components/Footer';
 
 export default function Home() {
   const { isCollapsed } = useSidebar();
@@ -206,6 +207,9 @@ export default function Home() {
         </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer sidebarWidth={sidebarWidth} />
     </div>
   );
 }

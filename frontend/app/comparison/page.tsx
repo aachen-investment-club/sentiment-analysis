@@ -8,6 +8,7 @@ import ArticleSelectorComparison from '../components/ArticleSelectorComparison';
 import CollapsibleSection from '../components/CollapsibleSection';
 import LinesCompare from '../components/LinesCompare';
 import BarsCompare from '../components/BarsCompare';
+import Footer from '../components/Footer';
 
 interface Article {
   title: string;
@@ -1038,6 +1039,9 @@ export default function ComparisonPage() {
 
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer sidebarWidth={sidebarWidth} />
     </div>
   );
 }
