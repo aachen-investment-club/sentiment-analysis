@@ -207,6 +207,14 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
     }
   }, [selectAll, filteredArticles]);
 
+  // Update selectAll when individual selections change
+  useEffect(() => {
+    if (filteredArticles.length > 0) {
+      const allSelected = filteredArticles.every(article => selectedArticles.has(article.title));
+      setSelectAll(allSelected);
+    }
+  }, [selectedArticles, filteredArticles]);
+
   const toggleArticleSelection = (title: string) => {
     setSelectedArticles(prev => {
       const next = new Set(prev);
@@ -400,7 +408,7 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
                   onChange={(e) => setSelectAll(e.target.checked)}
                   className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <span className="text-sm font-medium text-gray-700">Select articles</span>
+                <span className="text-sm font-medium text-gray-700">Select All ({selectedArticles.size} selected)</span>
               </label>
             )}
           </div>
@@ -417,6 +425,12 @@ export default function ArticleSelectorComparison({ onStartAnalysis, analysisSta
                   className="border border-gray-200 bg-white rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedArticles.has(article.title)}
+                      onChange={() => toggleArticleSelection(article.title)}
+                      className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                    />
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1">
                         {article.title}
