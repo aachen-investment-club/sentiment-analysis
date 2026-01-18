@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import articles
 from backend.api.routes import progression 
+import os
 
 app = FastAPI(
     title="Sentiment Analysis API",
@@ -13,7 +14,7 @@ app = FastAPI(
 # CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
