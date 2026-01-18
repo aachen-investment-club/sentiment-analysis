@@ -11,8 +11,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from huggingface_hub import snapshot_download
 
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 
 class EnglishRegressionFinBERTDistil(nn.Module):

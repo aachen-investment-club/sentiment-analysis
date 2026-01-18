@@ -1,8 +1,8 @@
 
 Run with 
 
-RUN THIS FROM within the `backend_finbert` folder
+RUN THIS FROM THE ROOT DIR
 
 ```sh
-uvicorn server:app --host 0.0.0.0 --port 7575
+uvicorn backend_finbert.server:app --reload --host 127.0.0.1 --port 7575
 ```
