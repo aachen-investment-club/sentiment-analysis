@@ -1,8 +1,8 @@
 
 Run with 
 
-RUN THIS FROM THE ROOT REPO
-```sh
-uvicorn backend_finbert.server:app --host 0.0.0.0 --port 7575
+RUN THIS FROM within the `backend_finbert` folder
 
+```sh
+uvicorn server:app --host 0.0.0.0 --port 7575
 ```
