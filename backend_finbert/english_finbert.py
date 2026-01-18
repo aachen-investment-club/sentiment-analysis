@@ -13,7 +13,7 @@ from huggingface_hub import snapshot_download
 
 from pathlib import Path
 
-load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
+#load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 
 class EnglishRegressionFinBERTDistil(nn.Module):
@@ -60,7 +60,7 @@ def ensure_en_hf_assets_local(
     revision = os.getenv("EN_HF_REVISION", "main").strip() or None
     token = os.getenv("HF_TOKEN", "").strip() or None
 
-    local_dir = os.getenv("EN_LOCAL_DIR", "")
+    local_dir = os.getenv("EN_LOCAL_DIR", "/tmp/en_model")
     local_dir_path = Path(local_dir)
     local_dir_path.mkdir(parents=True, exist_ok=True)
 
