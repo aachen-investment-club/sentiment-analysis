@@ -9,11 +9,9 @@ from boto3.dynamodb.conditions import Key, Attr
 from backend.ml.sentiment_analysis import sentiment_analysis_text 
 from backend.ml.language_detection import is_article_german
 
-from backend.ml.preprocessing import extract_pdf_text
 
 from backend.config import constants as const
 from decimal import Decimal
-import streamlit as st
 
 
 def add_article_sentiment_analysis(

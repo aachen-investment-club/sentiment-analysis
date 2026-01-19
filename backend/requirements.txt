@@ -75,7 +75,6 @@ nibabel
 nipype
 nltk
 numpy
-openai
 orjson
 packaging
 pandas
@@ -87,7 +86,6 @@ platformdirs
 plotly
 pluggy
 preshed
-protobuf
 prov
 puremagic
 pyarrow
@@ -113,9 +111,7 @@ requests
 rpds-py
 s3transfer
 sacremoses
-safetensors
 scipy
-sentencepiece
 setuptools
 simplejson
 six
@@ -129,12 +125,10 @@ spacy-loggers
 srsly
 sseclient-py
 starlette
-streamlit
 sympy
 tabulate
 tenacity
 thinc
-tokenizers
 toml
 tools
 tornado
