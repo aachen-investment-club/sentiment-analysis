@@ -2,7 +2,6 @@ from typing import List, Tuple
 from pathlib import Path
 from collections import defaultdict
 import pymupdf # PyMuPDF for text extraction
-import pdfplumber  # For table extraction and complex layouts
 import re # For regular expressions
 import nltk
 from openai import OpenAI
