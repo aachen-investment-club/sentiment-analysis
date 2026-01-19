@@ -8,3 +8,6 @@ venv/
 .git/
 .gitignore
 *.log
+
+**/node_modules
+**/.next
