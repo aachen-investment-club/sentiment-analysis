@@ -6,11 +6,7 @@ _project_root = _script_path.parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from backend.ml.preprocessing import preprocess_text, preprocess_pdf
-from backend.ml.translation import translate_to_english
-from backend.ml.finbert_regression import analyze_sentiment_regression
-from transformers import BertTokenizer, BertForSequenceClassification, pipeline
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from backend.ml.preprocessing import preprocess_text
 from collections import defaultdict
 import spacy
 import requests
@@ -19,17 +15,8 @@ import os
 
 load_dotenv()
 
-_MODEL_NAME = "yiyanghkust/finbert-tone"
-_FINBERT_C = BertForSequenceClassification.from_pretrained(_MODEL_NAME, num_labels=3)
-_TOKENIZER_C = BertTokenizer.from_pretrained(_MODEL_NAME)
 
-_TOKENIZER_R = AutoTokenizer.from_pretrained("LHF/finbert-regressor")
-_FINBERT_R= AutoModelForSequenceClassification.from_pretrained("LHF/finbert-regressor")
 
-_FINBERT_DE = AutoModelForSequenceClassification.from_pretrained('scherrmann/GermanFinBert_SC_Sentiment')
-_TOKENIZER_DE = AutoTokenizer.from_pretrained('scherrmann/GermanFinBert_SC_Sentiment')
-
-_PIPELINE = pipeline("sentiment-analysis", model=_FINBERT_R, tokenizer=_TOKENIZER_R)
 
 
 BACKEND2_URL = os.environ.get("FINBERT_URL")
@@ -79,75 +66,18 @@ def sentiment_analysis_text(
 ):
     preprocessed_sentences = preprocess_text(text)
 
-    if regression:
-        if german:
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
 
-        results = analyze_sentiment_regression_via_backend2(
-            preprocessed_sentences,
-            german  
-        )
+    results = analyze_sentiment_regression_via_backend2(
+        preprocessed_sentences,
+        german  
+    )
 
-        average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
+    average, overall_sentiment, confidence = aggregate_sentiment_regression(results)
 
-        return average, overall_sentiment, confidence, results
+    return average, overall_sentiment, confidence, results
 
-    if german:
-        preprocessed_sentences = translate_to_english(preprocessed_sentences)
-        _PIPELINE.model = _FINBERT_C
-        _PIPELINE.tokenizer = _TOKENIZER_C
-    else:
-        _PIPELINE.model = _FINBERT_C
-        _PIPELINE.tokenizer = _TOKENIZER_C
 
-    results = _PIPELINE(preprocessed_sentences)
-    overall_sentiment, confidence = aggregate_sentiment(results)
-    return overall_sentiment, confidence, results
-
-        
-
-def sentiment_analysis_pdf(pdf_url: str, german: bool, regression: bool = False, normalize: bool = False) -> tuple[str, float, list[dict]]:
-    """
-    Analyze sentiment of PDF document using FinBERT.
-    
-    Args:
-        pdf_url: Path to PDF file
-        german: Whether the text is in German (will be translated to English)
-        regression: If True, use regression model (returns continuous scores)
-        normalize: If True and regression=True, normalize scores to better use [-1, 1] range
-        
-    Returns:
-        Tuple of (overall_sentiment_label, confidence, sentence_results)
-        - For regression: sentiment_label is "POSITIVE"/"NEGATIVE"/"NEUTRAL" based on average score
-        - For classification: sentiment_label is the dominant category
-    """
-    preprocessed_sentences = preprocess_pdf(pdf_url)  # Returns List[str]
-    
-    if regression:
-        # Use regression model - expects list of sentences
-        if german:
-            # Translate German sentences to English
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
-        
-        # Analyze using regression model
-        results = analyze_sentiment_regression(preprocessed_sentences, normalize=normalize)
-        overall_sentiment, confidence = aggregate_sentiment_regression(results)
-        return overall_sentiment, confidence, results
-    else:
-        # Use classification model
-        if german:
-            # Translate German to English, then use English FinBERT model
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
-            _PIPELINE.model = _FINBERT_C
-            _PIPELINE.tokenizer = _TOKENIZER_C
-        else:
-            _PIPELINE.model = _FINBERT_C
-            _PIPELINE.tokenizer = _TOKENIZER_C
-
-        results = _PIPELINE(preprocessed_sentences)
-        overall_sentiment, confidence = aggregate_sentiment(results)
-        return overall_sentiment, confidence, results
-
+     
 def aggregate_sentiment(sentence_sentiment: list[dict]) -> tuple[str, float]:
     """
     Aggregate classification-based sentiment results.
@@ -392,95 +322,3 @@ def aggregate_sentiment_regression(
     return weighted_avg, sentiment_label, confidence
 
 
-
-if __name__ == "__main__":
-    import os
-    
-    # Path to the example Bitcoin article (German)
-    project_root = Path(__file__).parent.parent.parent
-    pdf_path = project_root / "example_articles" / "bitcoin_article.pdf"
-    
-    if not pdf_path.exists():
-        print(f"Error: PDF not found at {pdf_path}")
-        print("Please ensure the file exists at example_articles/bitcoin_article.pdf")
-    else:
-        print("=" * 80)
-        print("Testing Sentiment Analysis on Bitcoin Article (German PDF)")
-        print("=" * 80)
-        print(f"PDF Path: {pdf_path}\n")
-        
-        # Test Classification
-        print("\n" + "-" * 80)
-        print("CLASSIFICATION MODEL (yiyanghkust/finbert-tone)")
-        print("-" * 80)
-        try:
-            overall_sentiment, confidence, results = sentiment_analysis_pdf(
-                str(pdf_path), 
-                german=True, 
-                regression=False
-            )
-            print(f"Overall Sentiment: {overall_sentiment}")
-            print(f"Confidence: {confidence}%")
-            print(f"Number of sentences analyzed: {len(results)}")
-            
-            # Show distribution of labels
-            label_counts = defaultdict(int)
-            for result in results:
-                label_counts[result['label']] += 1
-            print(f"\nLabel Distribution:")
-            for label, count in sorted(label_counts.items()):
-                percentage = (count / len(results)) * 100
-                print(f"  {label}: {count} sentences ({percentage:.1f}%)")
-            
-            # Show sample results
-            print(f"\nSample Results (first 5 sentences):")
-            for i, result in enumerate(results[:5], 1):
-                print(f"  {i}. {result['label']}: {result['score']:.4f}")
-                
-        except Exception as e:
-            print(f"Error in classification: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        # Test Regression (with normalization)
-        print("\n" + "-" * 80)
-        print("REGRESSION MODEL (LHF/finbert-regressor) - With Normalization")
-        print("-" * 80)
-        try:
-            overall_sentiment, confidence, results = sentiment_analysis_pdf(
-                str(pdf_path), 
-                german=True, 
-                regression=True,
-                normalize=True
-            )
-            scores = [r['score'] for r in results]
-            avg_score = sum(scores) / len(scores)
-            min_score = min(scores)
-            max_score = max(scores)
-            
-            print(f"Overall Sentiment: {overall_sentiment}")
-            print(f"Average Score: {avg_score:.4f}")
-            print(f"Confidence (abs avg): {confidence}%")
-            print(f"Number of sentences analyzed: {len(results)}")
-            print(f"Score Range: [{min_score:.4f}, {max_score:.4f}]")
-            
-            # Count positive/negative/neutral
-            positive_count = sum(1 for s in scores if s > 0.1)
-            negative_count = sum(1 for s in scores if s < -0.1)
-            neutral_count = len(scores) - positive_count - negative_count
-            
-            print(f"\nSentiment Distribution:")
-            print(f"  Positive (>0.1): {positive_count} sentences ({(positive_count/len(scores)*100):.1f}%)")
-            print(f"  Neutral (-0.1 to 0.1): {neutral_count} sentences ({(neutral_count/len(scores)*100):.1f}%)")
-            print(f"  Negative (<-0.1): {negative_count} sentences ({(negative_count/len(scores)*100):.1f}%)")
-            
-            # Show sample results
-            print(f"\nSample Results (first 5 sentences):")
-            for i, result in enumerate(results[:5], 1):
-                sentiment_label = "POSITIVE" if result['score'] > 0.1 else ("NEGATIVE" if result['score'] < -0.1 else "NEUTRAL")
-                print(f"  {i}. [{sentiment_label:8}] Score: {result['score']:+.4f}")
-                
-        except Exception as e:
-            print(f"Error in regression (with normalization): {e}")
-            import traceback
-            traceback.print_exc()
