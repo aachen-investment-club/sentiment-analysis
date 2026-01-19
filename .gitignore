@@ -1,7 +1,15 @@
+/.venv
 /venv
 /data
 __pycache__/
 .env
+.env.local
+/frontend/.env.local
 
 /prototyping/mock.py
 /prototyping/wikipedia_extractor.py
+/backend_finbert/distilbert-german-finance-mlm
+/backend_finbert/regression_finance_finetune_gbert_distil
+/backend_finbert/regression_finance_finetune_english_bert_distil
+/backend_finbert/.git
+/keys

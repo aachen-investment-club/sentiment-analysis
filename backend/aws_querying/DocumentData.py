@@ -6,11 +6,12 @@ from io import StringIO
 import pandas as pd
 
 from boto3.dynamodb.conditions import Key, Attr
-from backend.ml.preprocessing import extract_pdf_text
+from backend.ml.sentiment_analysis import sentiment_analysis_text 
+from backend.ml.language_detection import is_article_german
+
 
 from backend.config import constants as const
 from decimal import Decimal
-import streamlit as st
 
 
 def add_article_sentiment_analysis(
@@ -228,3 +229,72 @@ def query_table(
     )
     
 """
+
+
+def get_sentiment_analysis_aws(
+    selected_articles,
+    articles_contents,
+) :
+    """
+    this function is important! avoids having to re-run the sentiment analysis (still not ideal; storing the sentiment 
+    is definitely the best solution)
+    """
+    results = {}
+    article_file_names = [article.file_name for article in selected_articles]
+
+    for article, file_name in zip(selected_articles, article_file_names):
+        article_sentiment = check_exists_article_sentiment_analysis(article.DocumentID)
+        if article_sentiment: 
+            # Load language from cached sentiment analysis if available
+            if "language" in article_sentiment and "language" not in article:
+                article.language = article_sentiment["language"]
+            
+            # Convert Decimal to float for consistency (DynamoDB returns Decimal)
+            avg_sentiment = float(article_sentiment["average_sentiment"])
+            confidence = float(article_sentiment["confidence"])
+            
+            results[file_name] = (avg_sentiment, article_sentiment["label"], 
+                                  confidence, article_sentiment["details"])
+
+        else: 
+            # Get language from article metadata, detect if not available
+            if not hasattr(article, 'language') or not article.language:
+                # Auto-detect language if not provided
+                article_text = articles_contents.get(file_name, "")
+                is_german = is_article_german(
+                    article_title=article.title if hasattr(article, 'title') else None,
+                    article_text=article_text
+                )
+                article.language = "de" if is_german else "en"
+            else:
+                is_german = article.language == "de"
+            
+            average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
+                articles_contents[file_name],
+                is_german,
+                True,
+                False,
+            )
+            add_article_sentiment_analysis(
+                article.DocumentID, 
+                average, 
+                sentiment_label, 
+                confidence, 
+                analysis_results,
+                article.language  # Store detected language in DynamoDB
+            )
+
+            results[file_name] = (
+                average,
+                sentiment_label,
+                confidence,
+                analysis_results,
+            )
+
+    return results
+
+
+
+
+
+
