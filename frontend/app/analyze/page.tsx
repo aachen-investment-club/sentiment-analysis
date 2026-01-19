@@ -7,6 +7,7 @@ import DetailedSentimentBreakdown from '../components/DetailedSentimentBreakdown
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
 import Footer from '../components/Footer';
+import { API_BASE_URL } from '../lib/api';
 
 interface AnalysisResult {
   overall_sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
@@ -36,7 +37,7 @@ export default function AnalyzePage() {
 
     setIsAnalyzing(true);
     try {
-      const response = await fetch('http://localhost:8000/api/articles/analyze', {
+      const response = await fetch(`${API_BASE_URL}/api/articles/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

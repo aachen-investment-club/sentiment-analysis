@@ -1,0 +1,26 @@
+
+title: Chip stocks jump as Nvidia supplier TSMC dismisses bubble fears: 'AI is real'
+jan 15 . 2026
+
+Chip stocks jumped on Thursday as Nvidia's (NVDA) chip manufacturer TSMC (TSM) gave financial forecasts that signaled strong demand for AI and its CEO dismissed bubble fears.
+
+Following the release of its fourth quarter results — which outperformed Wall Street’s expectations on the top and bottom lines — TSMC executives said the Taiwan-based manufacturer is set to see AI-related revenue grow at a compounded annual rate (CAGR) in the high-50% range through 2029. Crucially, the company is stepping up its capital expenditures in 2026, forecasting $54 billion in capex for the year at the midpoint of its range, up from about $41 billion in 2025, as its CEO noted "very positive" developments in the AI market.
+
+“We are preparing to increase our capacity and stepping [up] our capex investment to support our customers' future growth,” TSMC chief executive C.C. Wei said in a call with analysts following the results.
+
+“Our conviction in the multiyear AI megatrend remains strong, and we believe the demand for semiconductor[s] will continue to be very fundamental.”
+
+Nvidia stock rose nearly 2% to erase the previous day’s loss. Rival chipmaker AMD (AMD) also climbed 2%, while Broadcom (AVGO) and Micron (MU) edged up 1%. Amazon (AMZN) and Meta (META) nudged up fractionally.
+
+TSMC stock itself was up more than 4%.
+
+Asked explicitly whether stocks are in an AI bubble, Wei contended that the issue made him “very nervous.” So the executive said he spent the past three to four months talking to his customers (chip designers) and their end customers to understand whether AI demand is real or not, as a debate rages on Wall Street about whether the return on hundreds of billions worth of Big Tech investments in the tech will pay off.
+
+“They show[ed] me the evidence that AI really help[s] their business,” Wei said, adding that “AI is real — not only real, [but it] is starting to grow into our daily life.”
+
+TSMC’s first quarter sales outlook was $35.2 billion at the midpoint, above the $33.2 billion projected by analysts tracked by Bloomberg.
+
+The manufacturer’s strong results and guidance provide a hint at what investors can expect from upcoming Big Tech earnings. TSMC’s largest customers include Apple (AAPL), Nvidia, Qualcomm (QCOM), AMD, Broadcom, and Amazon. Nvidia alone accounts for 13% of the company’s revenue, according to Bloomberg data.
+
+TSMC’s results “necessarily imply strong continued orders” for chip designers like Nvidia and Broadcom, Wedbush analyst Matthew Bryson wrote in a note to clients Thursday.
+

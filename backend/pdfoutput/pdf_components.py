@@ -2,7 +2,10 @@
 from fpdf import FPDF
 from typing import List, Tuple, Dict
 import io
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
 
 class TemplateAIC(FPDF):
 
@@ -21,7 +24,8 @@ class TemplateAIC(FPDF):
         )
 
         # ---- Logo ----
-        self.image("./static/aic_logo.png", x=(self.w - 60) / 2, y=15, w=60)
+        self.image("/app/backend/static/aic_logo.png", x=(self.w - 60) / 2, y=15, w=60)
+        #self.image(str(STATIC_DIR / "aic_logo.png"), x=(self.w - 60) / 2, y=15, w=60)
 
         # ---- Move cursor below logo ----
         self.ln(35)
