@@ -1,0 +1,16 @@
+services:
+  backend:
+    image: benjaminoyarzun17/sentiment-backend:prod
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    image: benjaminoyarzun17/sentiment-frontend:prod
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

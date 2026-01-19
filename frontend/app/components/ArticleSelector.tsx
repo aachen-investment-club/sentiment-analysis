@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../lib/api';
 
 interface Article {
   title: string;
@@ -65,7 +66,7 @@ export default function ArticleSelector({ onSelectionCommit, onSelectionRevert, 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/articles');
+      const response = await fetch(`${API_BASE_URL}/api/articles`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch articles: ${response.statusText}`);

@@ -1,0 +1,11 @@
+/.venv
+/venv
+/data
+__pycache__/
+.env
+
+/prototyping/mock.py
+/prototyping/wikipedia_extractor.py
+/distilbert-german-finance-mlm
+/regression_finance_finetune_gbert_distil
+/regression_finance_finetune_english_bert_distil
