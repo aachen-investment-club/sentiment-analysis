@@ -14,7 +14,7 @@ __pycache__/
 /backend_finbert/.git
 /keys
 
-# Model directories (downloaded from HuggingFace - do not commit)
+# Model directories (downloaded from HuggingFace)
 /backend_finbert/de_base/
 /backend_finbert/de_reg/
 /backend_finbert/en_model/
