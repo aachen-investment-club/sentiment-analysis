@@ -15,7 +15,7 @@ type ArticleLabels = {
 export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderProps) {
   const [articleData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    source: 'Reuters',
+    source: '',
     assets: [] as string[],
     commodities: [] as string[],
     markets: [] as string[],
@@ -23,13 +23,19 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     title: '',
     language: 'English',
     text: ''
-});
+  });
 
   const [prevTitle, setPrevTitle] = useState('');
   const [languageHint, setLanguageHint] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [analyzingSentiment, setAnalyzingSentiment] = useState(false);
+  const [sentimentResult, setSentimentResult] = useState<{
+    average: number;
+    label: string;
+    confidence: number;
+  } | null>(null);
 
   // Mock data - replace with your actual data from backend
   
@@ -113,8 +119,33 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     setError('');
     setLoading(true);
 
+    // Validate required fields
+    if (!articleData.title.trim()) {
+      setError('Title is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!articleData.source.trim()) {
+      setError('Source is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!articleData.date) {
+      setError('Reference date is required');
+      setLoading(false);
+      return;
+    }
+
+    if (articleData.assets.length === 0) {
+      setError('At least one related asset is required');
+      setLoading(false);
+      return;
+    }
+
     if (articleData.format === 'text' && !articleData.text.trim()) {
-      setError('Please enter article text');
+      setError('Article content is required');
       setLoading(false);
       return;
     }
@@ -136,6 +167,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
 
 
     
+    setAnalyzingSentiment(true);
     const response = await fetch(`${API_BASE_URL}/api/articles/upload_article`, {
       method: "POST", 
       headers: {
@@ -158,7 +190,20 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     if (!response.ok){
        const err = await response.json().catch(() => null);
       console.error("Upload failed:", response.status, err);
+      setAnalyzingSentiment(false);
       throw new Error("Upload failed");
+    }
+    
+    const result = await response.json();
+    setAnalyzingSentiment(false);
+    
+    // Check if sentiment analysis was performed
+    if (result.sentiment_analyzed && result.sentiment) {
+      setSentimentResult({
+        average: result.sentiment.average,
+        label: result.sentiment.label,
+        confidence: result.sentiment.confidence
+      });
     }
     
     
@@ -179,7 +224,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     // Reset form
     setFormData({
       date: new Date().toISOString().split('T')[0],
-      source: 'Reuters',
+      source: '',
       assets: [],
       commodities: [],
       markets: [],
@@ -191,12 +236,15 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     setPrevTitle('');
     setLanguageHint('');
     
-    // Show hardcoded success message
+    // Show success message
     setUploadSuccess(true);
     if (onUploadSuccess) {
       onUploadSuccess();
     }
-    setTimeout(() => setUploadSuccess(false), 3000);
+    setTimeout(() => {
+      setUploadSuccess(false);
+      setSentimentResult(null);
+    }, 8000); // Increased timeout to show sentiment results longer
     setLoading(false);
   };
 
@@ -211,25 +259,28 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reference Date
+                Reference Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={articleData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Source
+                Source <span className="text-red-500">*</span>
               </label>
               <select
                 value={articleData.source}
                 onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
+                <option value="">Select a source</option>
                 {sources.map(source => (
                   <option key={source} value={source}>{source}</option>
                 ))}
@@ -244,15 +295,16 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
              
 
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Related Assets 
+                Related Assets <span className="text-red-500">*</span>
               </label>
 
               <select
+                value=""
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900"
                 onChange={(e) => handleSelect('assets', e.target.value)}
               >
                 <option value="" className="text-gray-400">
-                  Add Market 
+                  Add Asset
                 </option>
                 {articleLabels.assets.map(c => (
                   <option
@@ -264,7 +316,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
                   </option>
                 ))}
               </select>
-              {articleData.assets.length > 0 && (
+              {articleData.assets.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {articleData.assets.map(c => (
                     <span
@@ -288,6 +340,10 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
                     </span>
                   ))}
                 </div>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500 italic">
+                  No assets selected. Please select at least one asset.
+                </p>
               )}
 
             </div>
@@ -415,12 +471,13 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         <div className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Article Title
+              Article Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={articleData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="Enter article title"
             />
@@ -450,12 +507,13 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         {articleData.format === 'text' ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Enter article text
+              Enter article text <span className="text-red-500">*</span>
             </label>
             <textarea
               value={articleData.text}
               onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
               rows={10}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="Paste or type article text here..."
             />
@@ -475,9 +533,38 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
           </div>
         )}
 
+        {analyzingSentiment && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-md">
+            <div className="flex items-center">
+              <svg className="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Analyzing sentiment...
+            </div>
+          </div>
+        )}
+
         {uploadSuccess && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
-            ✓ Article saved successfully!
+            <div className="flex items-start">
+              <svg className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="font-semibold">Article saved successfully!</p>
+                {sentimentResult && (
+                  <div className="mt-2 text-sm">
+                    <p className="font-medium">Sentiment Analysis Results:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Label: <span className="font-semibold">{sentimentResult.label}</span></li>
+                      <li>Average Score: <span className="font-semibold">{sentimentResult.average.toFixed(3)}</span></li>
+                      <li>Confidence: <span className="font-semibold">{sentimentResult.confidence.toFixed(1)}%</span></li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
