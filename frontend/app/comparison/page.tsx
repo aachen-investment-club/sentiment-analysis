@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
-import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelectorComparison from '../components/ArticleSelectorComparison';
 import CollapsibleSection from '../components/CollapsibleSection';
 import LinesCompare from '../components/LinesCompare';
@@ -61,9 +60,6 @@ export default function ComparisonPage() {
   const { isCollapsed } = useSidebar();
   const sidebarWidth = isCollapsed ? 'lg:ml-20' : 'lg:ml-64';
 
-  // Upload step state
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-
   // Selection step state
   const [selectedArticles, setSelectedArticles] = useState<Article[]>([]);
   const [filters, setFilters] = useState<Filters>({});
@@ -114,13 +110,6 @@ export default function ComparisonPage() {
       return changed ? newSet : prev;
     });
   }, [exportData]);
-
-  const handleUploadSuccess =  () => {
-    setUploadSuccess(true);
-    setTimeout(() => {
-      setUploadSuccess(false);
-    }, 3000);
-  };
 
   const handleSelectionCommit = (articles: Article[], filterSelection: Filters) => {
     setSelectedArticles(articles);
@@ -685,20 +674,6 @@ export default function ComparisonPage() {
       <main className={`w-full px-4 sm:px-6 py-8 sm:py-16 transition-all duration-300 ${sidebarWidth}`}>
         <div className="mx-auto space-y-8 sm:space-y-12 max-w-full lg:max-w-4xl xl:max-w-5xl">
           
-          {/* Upload Step */}
-          <CollapsibleSection
-            title="Upload Documents"
-            summary={uploadSuccess ? "Article saved successfully!" : "Click to upload a new document"}
-          >
-            {uploadSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
-                Article saved successfully!
-              </div>
-            )}
-
-            <ArticleUploader onUploadSuccess={handleUploadSuccess} />
-          </CollapsibleSection>
-
           {/* Selection Step */}
           <CollapsibleSection
             title="Select Articles for Comparison"
