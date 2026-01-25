@@ -2,24 +2,60 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 
-from backend.aws_querying.DocumentData import list_articles, get_document_labels, add_article_text
+from backend.aws_querying.DocumentData import list_articles, get_document_labels, add_article_text, add_article_sentiment_analysis
 from backend.api.utils import transform_dynamodb_item
 from backend.ml.sentiment_analysis import sentiment_analysis_text
 from backend.ml.language_detection import detect_language
-from pydantic import BaseModel
+from backend.ml.language_detection import is_article_german
+from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
 
 class Article(BaseModel):
-    date: str
-    assets: List[str]
+    date: str = Field(..., min_length=1, description="Reference date is required")
+    assets: List[str] = Field(..., min_length=1, description="At least one asset is required")
     commodities: List[str]
     markets: List[str]
-    source: str
-    title: str
+    source: str = Field(..., min_length=1, description="Source is required")
+    title: str = Field(..., min_length=1, description="Title is required")
     language: str
-    text: str
+    text: str = Field(..., min_length=1, description="Article content is required")
+
+    @field_validator('date')
+    @classmethod
+    def validate_date(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Reference date is required')
+        return v.strip()
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Title is required')
+        return v.strip()
+
+    @field_validator('source')
+    @classmethod
+    def validate_source(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Source is required')
+        return v.strip()
+
+    @field_validator('assets')
+    @classmethod
+    def validate_assets(cls, v: List[str]) -> List[str]:
+        if not v or len(v) == 0:
+            raise ValueError('At least one related asset is required')
+        return v
+
+    @field_validator('text')
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Article content is required')
+        return v.strip()
 
 
 class AnalyzeTextRequest(BaseModel):
@@ -46,7 +82,8 @@ async def get_sources():
 async def upload_article(article: Article):
 
     print(article.date)
-    out = add_article_text(
+    # Save article to database
+    document_id = add_article_text(
         article.date, 
         article.assets, 
         article.commodities, 
@@ -56,14 +93,75 @@ async def upload_article(article: Article):
         article.title, 
         article.language
     )
-    if out: 
-        print("done uploading")
-        return {"status": "success"}
-
-    raise HTTPException(
-        status_code=400,
-        detail="Invalid article data"
-    )
+    
+    if not document_id: 
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to save article to database"
+        )
+    
+    print("done uploading article")
+    
+    # Perform sentiment analysis
+    try:
+        # Determine if article is German
+        is_german = article.language.lower() == "de" if article.language else False
+        if not is_german:
+            # Auto-detect language if not explicitly set
+            is_german = is_article_german(
+                article_title=article.title,
+                article_text=article.text
+            )
+        
+        # Run sentiment analysis
+        average, sentiment_label, confidence, analysis_results = sentiment_analysis_text(
+            article.text,
+            is_german,
+            regression=True,
+            normalize=False
+        )
+        
+        # Store sentiment analysis results
+        language_code = "de" if is_german else "en"
+        sentiment_saved = add_article_sentiment_analysis(
+            document_id,
+            average,
+            sentiment_label,
+            confidence,
+            analysis_results,
+            language_code
+        )
+        
+        if sentiment_saved:
+            print(f"Sentiment analysis completed and saved for document {document_id}")
+            return {
+                "status": "success",
+                "document_id": document_id,
+                "sentiment_analyzed": True,
+                "sentiment": {
+                    "average": float(average),
+                    "label": sentiment_label,
+                    "confidence": float(confidence)
+                }
+            }
+        else:
+            print(f"Warning: Article saved but sentiment analysis failed to save for document {document_id}")
+            return {
+                "status": "success",
+                "document_id": document_id,
+                "sentiment_analyzed": False,
+                "message": "Article saved but sentiment analysis failed to save"
+            }
+            
+    except Exception as e:
+        print(f"Error during sentiment analysis for document {document_id}: {str(e)}")
+        # Article is saved, but sentiment analysis failed
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "sentiment_analyzed": False,
+            "message": f"Article saved but sentiment analysis failed: {str(e)}"
+        }
 
 
 
