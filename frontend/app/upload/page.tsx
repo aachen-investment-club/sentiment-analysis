@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
 import Footer from '../components/Footer';
+import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
 
 const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
@@ -44,29 +45,36 @@ export default function UploadPage() {
       {/* Header Section */}
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
         <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
-          <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
-            <div className="flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">
-                Upload Article
-              </h1>
+          {/* Auth Button - Full width row, button at right edge */}
+          <div className="w-full flex justify-end mb-4 pr-0">
+            <AuthButton />
+          </div>
+          <div className="mx-auto max-w-full lg:max-w-4xl xl:max-w-5xl">
+            {/* Title and Description - Centered */}
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-4">
+                <svg
+                  className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">
+                  Upload Article
+                </h1>
+              </div>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+                Add a new financial article to the database for sentiment analysis. 
+                Fill in the metadata and content below.
+              </p>
             </div>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-              Add a new financial article to the database for sentiment analysis. 
-              Fill in the metadata and content below.
-            </p>
           </div>
         </div>
       </header>
