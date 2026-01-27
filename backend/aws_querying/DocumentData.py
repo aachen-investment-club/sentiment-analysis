@@ -206,6 +206,29 @@ def list_articles():
 
     return False
 
+
+def get_distinct_sources(): 
+    """Return sorted list of unique source values from the documents table."""
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
+    seen = set()
+    params = {
+        "ProjectionExpression": "#src",
+        "ExpressionAttributeNames": {"#src": "source"},
+    }
+    while True:
+        response = table.scan(**params)
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            return []
+        for item in response.get("Items", []):
+            src = item.get("source")
+            if src and isinstance(src, str) and src.strip():
+                seen.add(src.strip())
+        if not response.get("LastEvaluatedKey"):
+            break
+        params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+    return sorted(seen)
+
 def get_articles_s3(articles: List[str]): 
     client= boto3.client(const.S3)
 

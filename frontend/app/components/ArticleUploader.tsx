@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
 interface ArticleUploaderProps {
@@ -46,13 +46,35 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     assets: [], 
   })
 
-  const [sources, setSources] = useState<string[]>([])
+  const [sources, setSources] = useState<string[]>([]);
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const sourceComboboxRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
     fetchCategories();
     //this is executed on mount 
   }, []);
+
+  // Close source dropdown on outside click or Escape
+  useEffect(() => {
+    if (!sourceDropdownOpen) return;
+    const handle = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent) {
+        if (e.key === 'Escape') setSourceDropdownOpen(false);
+        return;
+      }
+      if (sourceComboboxRef.current && !sourceComboboxRef.current.contains(e.target as Node)) {
+        setSourceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('keydown', handle);
+    return () => {
+      document.removeEventListener('mousedown', handle);
+      document.removeEventListener('keydown', handle);
+    };
+  }, [sourceDropdownOpen]);
 
   const fetchCategories = async () => {
     try{
@@ -242,7 +264,12 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     });
     setPrevTitle('');
     setLanguageHint('');
-    
+    // Refresh sources so the newly used source appears in suggestions next time
+    const resSources = await fetch(`${API_BASE_URL}/api/articles/sources`);
+    if (resSources.ok) {
+      const next = await resSources.json();
+      setSources(next);
+    }
     // Show success message
     setUploadSuccess(true);
     if (onUploadSuccess) {
@@ -277,21 +304,96 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
               />
             </div>
 
-            <div>
+            <div ref={sourceComboboxRef} className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Source <span className="text-red-500">*</span>
               </label>
-              <select
-                value={articleData.source}
-                onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              >
-                <option value="">Select a source</option>
-                {sources.map(source => (
-                  <option key={source} value={source}>{source}</option>
-                ))}
-              </select>
+              <div className="flex rounded-md border border-gray-300 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                <input
+                  type="text"
+                  value={articleData.source}
+                  onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
+                  onFocus={() => setSourceDropdownOpen(true)}
+                  placeholder="Select or type a source"
+                  className="flex-1 min-w-0 rounded-l-md border-0 py-2 px-3 text-gray-900 placeholder-gray-400 focus:ring-0"
+                  aria-expanded={sourceDropdownOpen}
+                  aria-haspopup="listbox"
+                  aria-controls="source-listbox"
+                  id="source-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSourceDropdownOpen((open) => !open)}
+                  className="flex items-center rounded-r-md border-l border-gray-300 bg-gray-50 px-3 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                  aria-label="Open source list"
+                >
+                  <svg
+                    className={`h-5 w-5 transition-transform ${sourceDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              {sourceDropdownOpen && (() => {
+                const query = articleData.source.trim().toLowerCase();
+                const filteredSources = query
+                  ? sources.filter((s) => s.toLowerCase().includes(query))
+                  : sources;
+                return (
+                  <ul
+                    id="source-listbox"
+                    role="listbox"
+                    className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
+                  >
+                    {sources.length === 0 ? (
+                      <li className="px-3 py-2 text-sm text-gray-500">
+                        No saved sources yet. Type a name above to add one.
+                      </li>
+                    ) : filteredSources.length === 0 ? (
+                      <li className="px-3 py-2 text-sm text-gray-500">
+                        No matching source. Use the text above as a new source.
+                      </li>
+                    ) : (
+                      filteredSources.map((source) => {
+                        const isSelected = articleData.source === source;
+                        return (
+                          <li
+                            key={source}
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, source }));
+                              setSourceDropdownOpen(false);
+                            }}
+                            className={`flex cursor-default items-center gap-2 px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 ${
+                              isSelected ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            {isSelected ? (
+                              <svg className="h-5 w-5 flex-shrink-0 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            ) : (
+                              <span className="h-5 w-5 flex-shrink-0" aria-hidden />
+                            )}
+                            <span>{source}</span>
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                );
+              })()}
+              <p className="mt-1 text-xs text-gray-500">
+                Type to search saved sources, or click the arrow to see all. You can use new text as a source.
+              </p>
             </div>
           </div>
 

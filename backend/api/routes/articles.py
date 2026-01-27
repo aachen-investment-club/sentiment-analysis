@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 
-from backend.aws_querying.DocumentData import list_articles, get_document_labels, add_article_text, add_article_sentiment_analysis
+from backend.aws_querying.DocumentData import list_articles, get_document_labels, get_distinct_sources, add_article_text, add_article_sentiment_analysis
 from backend.api.deps import get_current_user
 from backend.api.utils import transform_dynamodb_item
 from backend.ml.sentiment_analysis import sentiment_analysis_text
@@ -71,16 +71,21 @@ async def get_categories_labels():
 
 
 
+DEFAULT_SOURCES = ["Reuters", "Bloomberg", "WSJ", "Bitcoin.com News", "Internal"]
+
+
 @router.get("/sources", response_model=List[str])
 async def get_sources():
-    
-    return ['Reuters', 'Bloomberg', 'WSJ', 'Bitcoin.com News', 'Internal']
+    """Return distinct sources from documents, merged with defaults so the list is never empty."""
+    from_db = get_distinct_sources()
+    combined = {s for s in from_db}
+    for s in DEFAULT_SOURCES:
+        combined.add(s)
+    return sorted(combined)
 
 
 @router.post("/upload_article", response_model= Dict[str, Any])
 async def upload_article(article: Article, current_user: dict = Depends(get_current_user)):
-
-    print(article.date)
     # Save article to database
     document_id = add_article_text(
         article.date, 
@@ -98,8 +103,6 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
             status_code=400,
             detail="Failed to save article to database"
         )
-    
-    print("done uploading article")
     
     # Perform sentiment analysis
     try:
@@ -132,7 +135,6 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
         )
         
         if sentiment_saved:
-            print(f"Sentiment analysis completed and saved for document {document_id}")
             return {
                 "status": "success",
                 "document_id": document_id,
@@ -144,7 +146,6 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
                 }
             }
         else:
-            print(f"Warning: Article saved but sentiment analysis failed to save for document {document_id}")
             return {
                 "status": "success",
                 "document_id": document_id,
@@ -153,7 +154,6 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
             }
             
     except Exception as e:
-        print(f"Error during sentiment analysis for document {document_id}: {str(e)}")
         # Article is saved, but sentiment analysis failed
         return {
             "status": "success",
@@ -283,8 +283,6 @@ async def get_articles():
         
         # Transform DynamoDB items to JSON-serializable format
         transformed_articles = [transform_dynamodb_item(article) for article in articles]
-        print(transformed_articles[0])
-        
         return transformed_articles
         
     except HTTPException:
