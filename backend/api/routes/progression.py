@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException 
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from datetime import datetime, date
+from backend.api.deps import get_current_user
 from backend.api.utils import transform_dynamodb_item
 from pydantic import BaseModel
 from backend.aws_querying.DocumentData import (get_articles_s3, 
@@ -324,7 +325,7 @@ class PDFExportRequest(BaseModel):
 
 
 @router.post("/export_pdf")
-async def export_pdf(request: PDFExportRequest):
+async def export_pdf(request: PDFExportRequest, current_user: dict = Depends(get_current_user)):
     """
     Generate PDF from export data.
     
