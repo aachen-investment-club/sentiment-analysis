@@ -8,6 +8,7 @@ import CollapsibleSection from '../components/CollapsibleSection';
 import LinesCompare from '../components/LinesCompare';
 import BarsCompare from '../components/BarsCompare';
 import Footer from '../components/Footer';
+import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
 
 const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
@@ -670,13 +671,20 @@ export default function ComparisonPage() {
       {/* Header Section */}
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
         <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
-          <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              Asset sentiment comparison mode
-            </h1>
-            <p className="text-base sm:text-lg text-gray-600">
-              Compare the sentiments of multiple assets. Analyze relative sentiment performance.
-            </p>
+          {/* Auth Button - Full width row, button at right edge */}
+          <div className="w-full flex justify-end mb-4 pr-0">
+            <AuthButton />
+          </div>
+          <div className="mx-auto max-w-full lg:max-w-4xl xl:max-w-5xl">
+            {/* Title and Description - Centered */}
+            <div className="text-center">
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+                Asset sentiment comparison mode
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600">
+                Compare the sentiments of multiple assets. Analyze relative sentiment performance.
+              </p>
+            </div>
           </div>
         </div>
       </header>

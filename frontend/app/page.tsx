@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Sidebar from './components/Sidebar';
 import { useSidebar } from './components/SidebarContext';
 import Footer from './components/Footer';
+import AuthButton from './components/AuthButton';
 
 export default function Home() {
   const { isCollapsed } = useSidebar();
@@ -17,14 +18,21 @@ export default function Home() {
       {/* Header Section */}
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
         <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
-          <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              AIC Sentiment Analyzer
-            </h1>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-              This application provides advanced sentiment analysis for financial documents using FinBERT models. 
-              Select a mode from below to begin your analysis.
-            </p>
+          {/* Auth Button - Full width row, button at right edge */}
+          <div className="w-full flex justify-end mb-4 pr-0">
+            <AuthButton />
+          </div>
+          <div className="mx-auto max-w-full lg:max-w-4xl xl:max-w-5xl">
+            {/* Title and Description - Centered */}
+            <div className="text-center">
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+                AIC Sentiment Analyzer
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+                This application provides advanced sentiment analysis for financial documents using FinBERT models. 
+                Select a mode from below to begin your analysis.
+              </p>
+            </div>
           </div>
         </div>
       </header>
