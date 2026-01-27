@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -17,6 +17,7 @@ COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
 
 
 
+from backend.api.deps import get_current_user
 from backend.api.routes import articles
 from backend.api.routes import progression 
 import os
@@ -58,7 +59,7 @@ oauth.register(
     name="oidc",
     authority="https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T",
     client_id=os.getenv("COGNITO_CLIENT_ID"),
-    client_secret=os.getenv("AWS_COGNI_CLIENT_SECRET"),
+    client_secret=os.getenv("AWS_COGNITO_CLIENT_SECRET"),
     server_metadata_url="https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T/.well-known/openid-configuration",
     client_kwargs={"scope": "email openid"},
 )
@@ -97,9 +98,13 @@ async def logout(request: Request):
     cognito_logout = f"https://{COGNITO_DOMAIN_PREFIX}.auth.{COGNITO_REGION}.amazoncognito.com/logout?{qs}"
 
 
-    return RedirectResponse(cognito_logout) 
+    return RedirectResponse(cognito_logout)
 
 
+@app.get("/user")
+async def get_user(current_user: dict = Depends(get_current_user)):
+    """Return the current session user or 401 if not authenticated."""
+    return current_user
 
 
 
