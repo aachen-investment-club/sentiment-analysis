@@ -37,7 +37,6 @@ app.add_middleware(
 )
 
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")],
@@ -54,15 +53,24 @@ app.include_router(progression.router)
 
 oauth = OAuth()
 
+# Get client secret - may be None for public clients
+client_secret = os.getenv("AWS_COGNITO_CLIENT_SECRET")
 
-oauth.register(
-    name="oidc",
-    authority="https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T",
-    client_id=os.getenv("COGNITO_CLIENT_ID"),
-    client_secret=os.getenv("AWS_COGNITO_CLIENT_SECRET"),
-    server_metadata_url="https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T/.well-known/openid-configuration",
-    client_kwargs={"scope": "email openid"},
-)
+
+# Register OAuth client
+oauth_config = {
+    "name": "oidc",
+    "authority": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T",
+    "client_id": os.getenv("COGNITO_CLIENT_ID"),
+    "server_metadata_url": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T/.well-known/openid-configuration",
+    "client_kwargs": {"scope": "email openid"},
+}
+
+# Only add client_secret if it exists (for confidential clients)
+if client_secret:
+    oauth_config["client_secret"] = client_secret
+
+oauth.register(**oauth_config)
 
 
 
@@ -76,29 +84,29 @@ async def login(request: Request):
 
 @app.get("/authorize")
 async def authorize(request: Request):
-    token = await oauth.oidc.authorize_access_token(request)
-    user = token["userinfo"]
-    request.session["user"] = user
-    return RedirectResponse(url="/", status_code=302)
+    try:
+        token = await oauth.oidc.authorize_access_token(request)
+        user = token["userinfo"]
+        request.session["user"] = user
+        
+        # Redirect to frontend after successful authentication
+        frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+        return RedirectResponse(url=frontend_url, status_code=302)
+    except Exception as e:        
+        # Redirect to frontend with error
+        frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+        return RedirectResponse(url=f"{frontend_url}?auth_error=true&reason={type(e).__name__}", status_code=302)
 
 
 @app.get("/logout")
 async def logout(request: Request):
-
+    # Clear the app session
     request.session.pop('user', None)
 
-    logout_uri = request.url_for("root")
-
-    params = {
-        "client_id": COGNITO_CLIENT_ID,
-        "logout_uri": logout_uri,  
-    }
-    qs = urllib.parse.urlencode(params)
-
-    cognito_logout = f"https://{COGNITO_DOMAIN_PREFIX}.auth.{COGNITO_REGION}.amazoncognito.com/logout?{qs}"
-
-
-    return RedirectResponse(cognito_logout)
+    # Redirect directly to frontend root so the user always lands on the main page.
+    frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+    frontend_root = frontend_origin.rstrip("/") + "/"
+    return RedirectResponse(url=frontend_root, status_code=302)
 
 
 @app.get("/user")
@@ -117,7 +125,6 @@ async def root():
         "version": "1.0.0",
         "status": "healthy"
     }
-
 
 @app.get("/health")
 async def health_check():

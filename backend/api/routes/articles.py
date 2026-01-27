@@ -66,8 +66,6 @@ class AnalyzeTextRequest(BaseModel):
 @router.get("/categories", response_model=Dict[str, List])
 async def get_categories_labels():
     doc_labels = get_document_labels()
-    print(doc_labels.keys())
-
     return doc_labels
 
 
