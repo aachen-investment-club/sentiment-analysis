@@ -164,16 +164,6 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
             "message": f"Article saved but sentiment analysis failed: {str(e)}"
         }
 
-
-
-
-
-
-
-
-
-
-
 @router.post("/analyze", response_model=Dict[str, Any])
 async def analyze_text(request: AnalyzeTextRequest):
     """
@@ -201,29 +191,15 @@ async def analyze_text(request: AnalyzeTextRequest):
         # Detect language
         detected_lang = detect_language(request.text)
         is_german = detected_lang == "de"
-        
-        # Get preprocessed sentences first
-        from backend.ml.preprocessing import preprocess_text
-        from backend.ml.translation import translate_to_english
-        
-        preprocessed_sentences = preprocess_text(request.text)
-        if is_german:
-            preprocessed_sentences = translate_to_english(preprocessed_sentences)
-        
-        # Analyze sentiment using regression model
+
+        # Analyze sentiment using German or English regression model
         # Returns: (average_score, overall_sentiment_label, confidence, sentence_results)
-        # Note: analyze_sentiment_regression already includes sentence text in results
         average, overall_sentiment, confidence, results = sentiment_analysis_text(
             request.text,
             german=is_german,
             regression=True,
             normalize=False
         )
-        
-        # Ensure sentence text is in results (should already be there from regression model)
-        for i, result in enumerate(results):
-            if 'sentence' not in result and i < len(preprocessed_sentences):
-                result['sentence'] = preprocessed_sentences[i]
         
         # Calculate percentages based on regression score thresholds
         # Using same thresholds as aggregate_sentiment_regression
@@ -239,11 +215,11 @@ async def analyze_text(request: AnalyzeTextRequest):
         negative_percentage = round((negative_count / total * 100) if total > 0 else 0, 1)
         neutral_percentage = round((neutral_count / total * 100) if total > 0 else 0, 1)
         
-        # Format sentence results with text
+        # Format sentence results with text (sentence comes from FinBERT backend)
         sentence_results = []
-        for i, result in enumerate(results):
+        for result in results:
             score = result.get('score', 0.0)
-            sentence_text = result.get('sentence', preprocessed_sentences[i] if i < len(preprocessed_sentences) else "")
+            sentence_text = result.get('sentence', '')
             
             # Determine sentiment label from score (using same thresholds)
             if score > positive_threshold:
@@ -267,7 +243,8 @@ async def analyze_text(request: AnalyzeTextRequest):
             "negative_percentage": negative_percentage,
             "neutral_percentage": neutral_percentage,
             "sentences": sentence_results,
-            "total_sentences": total
+            "total_sentences": total,
+            "detected_language": detected_lang,
         }
         
     except HTTPException:
