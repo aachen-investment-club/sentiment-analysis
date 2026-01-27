@@ -20,7 +20,7 @@ load_dotenv()
 
 
 BACKEND2_URL = os.environ.get("FINBERT_URL")
-print(BACKEND2_URL)
+
 
 def analyze_sentiment_regression_via_backend2(
     sentences: list[str],
@@ -230,7 +230,6 @@ def aggregate_sentiment_regression(
         lead_sentences: Number of leading sentences to weight (default: 2)
         keyword_weight_per_hit: Weight multiplier per keyword match (default: 1.2)
         financial_keywords: Set of keywords to search for (default: FINANCIAL_KEYWORDS)
-        enable_logging: If True, print detailed weight and contribution information
         
     Returns:
         Tuple of (overall_sentiment_label, confidence)
@@ -243,15 +242,6 @@ def aggregate_sentiment_regression(
     n = len(sentence_sentiment)
     weighted_scores = []
     total_weight = 0.0
-    
-    if enable_logging:
-        print("\n" + "=" * 80)
-        print("WEIGHTED SENTIMENT AGGREGATION")
-        print("=" * 80)
-        print(f"Total sentences: {n}")
-        print(f"Lead weight: {lead_weight}x (first {lead_sentences} sentences)")
-        print(f"Keyword weight: {keyword_weight_per_hit}x per keyword hit")
-        print("-" * 80)
     
     for i, pred in enumerate(sentence_sentiment):
         score = pred['score']
@@ -278,17 +268,6 @@ def aggregate_sentiment_regression(
         weighted_scores.append(weighted_score)
         total_weight += base_weight
         
-        # Optional logging
-        if enable_logging:
-            flags = []
-            if lead_boost:
-                flags.append(f"LEAD x{lead_weight}")
-            if keyword_count > 0:
-                flags.append(f"KEYWORDS({keyword_count}) x{keyword_weight_per_hit**keyword_count:.2f}")
-            flag_str = " | ".join(flags) if flags else "BASE"
-            
-            print(f"Sentence {i+1:3d}: score={score:+.4f}, weight={base_weight:.2f}, "
-                  f"contribution={weighted_score:+.4f} [{flag_str}]")
     
     # Compute weighted average
     if total_weight == 0:
@@ -310,14 +289,6 @@ def aggregate_sentiment_regression(
     # Calculate confidence as percentage (0-100)
     # Use absolute value and scale to percentage
     confidence = round(abs(weighted_avg) * 100, 1)
-    
-    if enable_logging:
-        print("-" * 80)
-        print(f"Total weight sum: {total_weight:.2f}")
-        print(f"Weighted average: {weighted_avg:+.4f}")
-        print(f"Sentiment label: {sentiment_label}")
-        print(f"Confidence: {confidence}%")
-        print("=" * 80 + "\n")
     
     return weighted_avg, sentiment_label, confidence
 
