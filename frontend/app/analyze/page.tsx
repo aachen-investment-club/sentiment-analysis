@@ -22,6 +22,7 @@ interface AnalysisResult {
     score: number;
   }>;
   total_sentences: number;
+  detected_language: 'de' | 'en';
 }
 
 export default function AnalyzePage() {
