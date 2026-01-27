@@ -169,10 +169,11 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     
     setAnalyzingSentiment(true);
     const response = await fetch(`${API_BASE_URL}/api/articles/upload_article`, {
-      method: "POST", 
+      method: "POST",
+      credentials: "include",
       headers: {
-      "Content-Type": "application/json",
-      }, 
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
       date: articleData.date,
       assets: articleData.assets,
@@ -187,11 +188,17 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     })
     
     
-    if (!response.ok){
-       const err = await response.json().catch(() => null);
-      console.error("Upload failed:", response.status, err);
+    if (!response.ok) {
       setAnalyzingSentiment(false);
-      throw new Error("Upload failed");
+      setLoading(false);
+      if (response.status === 401) {
+        setError("Please log in to upload.");
+        return;
+      }
+      const err = await response.json().catch(() => null);
+      console.error("Upload failed:", response.status, err);
+      setError(err?.detail ?? "Upload failed");
+      return;
     }
     
     const result = await response.json();
@@ -529,7 +536,15 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         {/* Messages */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md">
-            {error}
+            <p>{error}</p>
+            {error === "Please log in to upload." && (
+              <a
+                href={`${API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "")}/login`}
+                className="mt-2 inline-block font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              >
+                Log in
+              </a>
+            )}
           </div>
         )}
 

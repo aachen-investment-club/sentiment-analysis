@@ -1,8 +1,9 @@
 """Article-related API endpoints."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 
 from backend.aws_querying.DocumentData import list_articles, get_document_labels, add_article_text, add_article_sentiment_analysis
+from backend.api.deps import get_current_user
 from backend.api.utils import transform_dynamodb_item
 from backend.ml.sentiment_analysis import sentiment_analysis_text
 from backend.ml.language_detection import detect_language
@@ -79,7 +80,7 @@ async def get_sources():
 
 
 @router.post("/upload_article", response_model= Dict[str, Any])
-async def upload_article(article: Article):
+async def upload_article(article: Article, current_user: dict = Depends(get_current_user)):
 
     print(article.date)
     # Save article to database
