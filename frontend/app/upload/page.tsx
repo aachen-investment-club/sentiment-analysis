@@ -1,13 +1,40 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
 import ArticleUploader from '../components/ArticleUploader';
 import Footer from '../components/Footer';
+import { API_BASE_URL } from '../lib/api';
+
+const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const loginUrl = `${backendBase}/login`;
 
 export default function UploadPage() {
   const { isCollapsed } = useSidebar();
   const sidebarWidth = isCollapsed ? 'lg:ml-20' : 'lg:ml-64';
+
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendBase}/user`, {
+          credentials: 'include',
+        });
+        if (!cancelled) {
+          setIsAuthenticated(res.ok);
+        }
+      } catch {
+        if (!cancelled) setIsAuthenticated(false);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
@@ -48,35 +75,60 @@ export default function UploadPage() {
       <main className={`w-full px-4 sm:px-6 py-8 sm:py-16 transition-all duration-300 ${sidebarWidth}`}>
         <div className="mx-auto space-y-8 sm:space-y-12 max-w-full lg:max-w-4xl xl:max-w-5xl">
           
-          {/* Upload Form */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-            <ArticleUploader />
-          </div>
+          {!authChecked && (
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 text-center text-gray-600">
+              Checking authentication...
+            </div>
+          )}
 
-          {/* Help Section */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Upload Guidelines
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
-                <span>Ensure all required metadata fields are filled accurately</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
-                <span>Select appropriate assets, commodities, and markets related to the article</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
-                <span>The language will be auto-detected from the title, but you can override it if needed</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
-                <span>After uploading, you can immediately use the article in Progression or Comparison mode</span>
-              </li>
-            </ul>
-          </div>
+          {authChecked && !isAuthenticated && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-lg p-8 text-center">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Log in required</h2>
+              <p className="text-gray-700 mb-4">
+                You must be signed in to upload articles.
+              </p>
+              <a
+                href={loginUrl}
+                className="inline-block px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Log in
+              </a>
+            </div>
+          )}
+
+          {authChecked && isAuthenticated && (
+            <>
+              {/* Upload Form */}
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+                <ArticleUploader />
+              </div>
+
+              {/* Help Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Upload Guidelines
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>Ensure all required metadata fields are filled accurately</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>Select appropriate assets, commodities, and markets related to the article</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>The language will be auto-detected from the title, but you can override it if needed</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-600 mr-2">•</span>
+                    <span>After uploading, you can immediately use the article in Progression or Comparison mode</span>
+                  </li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </main>
 
