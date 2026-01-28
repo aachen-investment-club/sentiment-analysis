@@ -100,13 +100,26 @@ async def authorize(request: Request):
 
 @app.get("/logout")
 async def logout(request: Request):
-    # Clear the app session
-    request.session.pop('user', None)
+    # Clear the app session so our backend no longer considers the user logged in.
+    request.session.pop("user", None)
 
-    # Redirect directly to frontend root so the user always lands on the main page.
+    # Redirect to Cognito's logout endpoint so the IdP session and cookies are cleared.
+    # Otherwise the user can "log in" again without entering credentials (Cognito still has a session).
+    # Cognito app client's "Allowed sign-out URLs" or Cognito will not redirect back.
     frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
-    frontend_root = frontend_origin.rstrip("/") + "/"
-    return RedirectResponse(url=frontend_root, status_code=302)
+    logout_uri = frontend_origin.rstrip("/") + "/"
+    params = {
+        "client_id": COGNITO_CLIENT_ID,
+        "logout_uri": logout_uri,
+    }
+    qs = urllib.parse.urlencode(params)
+    cognito_domain = os.getenv("COGNITO_DOMAIN_PREFIX", "")
+    cognito_region = os.getenv("AWS_REGION", "eu-central-1")
+    if cognito_domain:
+        cognito_logout_url = f"https://{cognito_domain}.auth.{cognito_region}.amazoncognito.com/logout?{qs}"
+        return RedirectResponse(url=cognito_logout_url, status_code=302)
+    # If no Cognito domain is configured, just send user to frontend.
+    return RedirectResponse(url=logout_uri, status_code=302)
 
 
 @app.get("/user")
