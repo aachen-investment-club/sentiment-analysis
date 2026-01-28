@@ -25,7 +25,7 @@ BACKEND2_URL = os.environ.get("FINBERT_URL")
 def analyze_sentiment_regression_via_backend2(
     sentences: list[str],
     german: bool = False, 
-    timeout_s: float = 30.0
+    timeout_s: float = 300.0
 ) -> list[dict]:
     if german: 
         language = "de"
