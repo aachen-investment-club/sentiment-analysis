@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
-const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const backendBase = API_BASE_URL;
 
 export default function AuthButton() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

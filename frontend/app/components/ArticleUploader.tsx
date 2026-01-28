@@ -79,7 +79,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
   const fetchCategories = async () => {
     try{
       setLoading(true); 
-      const response = await fetch(`${API_BASE_URL}/api/articles/categories`)
+      const response = await fetch(`${API_BASE_URL}/articles/categories`)
 
       if (!response.ok){
         throw new Error(`Failed to fetch articles: ${response.statusText}`)
@@ -94,7 +94,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
         }
       )
       
-      const response_sources = await fetch(`${API_BASE_URL}/api/articles/sources`)
+      const response_sources = await fetch(`${API_BASE_URL}/articles/sources`)
 
       const data_sources = await response_sources.json();
       setSources(data_sources);
@@ -190,7 +190,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
 
     
     setAnalyzingSentiment(true);
-    const response = await fetch(`${API_BASE_URL}/api/articles/upload_article`, {
+    const response = await fetch(`${API_BASE_URL}/articles/upload_article`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -265,7 +265,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
     setPrevTitle('');
     setLanguageHint('');
     // Refresh sources so the newly used source appears in suggestions next time
-    const resSources = await fetch(`${API_BASE_URL}/api/articles/sources`);
+    const resSources = await fetch(`${API_BASE_URL}/articles/sources`);
     if (resSources.ok) {
       const next = await resSources.json();
       setSources(next);
@@ -641,7 +641,7 @@ export default function ArticleUploadForm({ onUploadSuccess }: ArticleUploaderPr
             <p>{error}</p>
             {error === "Please log in to upload." && (
               <a
-                href={`${API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "")}/login`}
+                href={`${API_BASE_URL}/login`}
                 className="mt-2 inline-block font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >
                 Log in

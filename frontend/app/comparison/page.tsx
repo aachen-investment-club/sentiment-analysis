@@ -11,7 +11,7 @@ import Footer from '../components/Footer';
 import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
 
-const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const backendBase = API_BASE_URL;
 const loginUrl = `${backendBase}/login`;
 
 interface Article {
@@ -158,7 +158,7 @@ export default function ComparisonPage() {
     setLoadingAnalysis(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sentiment/compare_mode`, {
+      const response = await fetch(`${API_BASE_URL}/sentiment/compare_mode`, {
         method: "POST", 
         headers: {
         "Content-Type": "application/json",
@@ -624,7 +624,7 @@ export default function ComparisonPage() {
         return convertedItem;
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/sentiment/export_pdf`, {
+      const response = await fetch(`${API_BASE_URL}/sentiment/export_pdf`, {
         method: 'POST',
         credentials: 'include',
         headers: {
