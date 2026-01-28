@@ -66,7 +66,7 @@ export default function ArticleSelector({ onSelectionCommit, onSelectionRevert, 
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/articles`);
+      const response = await fetch(`${API_BASE_URL}/articles`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch articles: ${response.statusText}`);

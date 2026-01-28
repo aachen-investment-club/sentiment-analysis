@@ -31,4 +31,6 @@ WORKDIR /app/backend
 ENV PYTHONPATH=/app
 
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000",  "--proxy-headers","--forwarded-allow-ips", "*"]
+
+#CMD ["uvicorn", "main:app","--host", "0.0.0.0", "--port", "8000","--root-path", "/api","--proxy-headers", "--forwarded-allow-ips", "*"]

@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
 
-const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const backendBase = API_BASE_URL;
 const loginUrl = `${backendBase}/login`;
 
 export default function UploadPage() {
