@@ -12,6 +12,13 @@ import spacy
 import requests
 from dotenv import load_dotenv
 import os
+import json
+import time
+import boto3
+import requests
+
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request as GoogleAuthRequest
 
 load_dotenv()
 
@@ -20,6 +27,43 @@ load_dotenv()
 
 
 BACKEND2_URL = os.environ.get("FINBERT_URL")
+PRODUCTION= False if "localhost" in BACKEND2_URL else True
+GCP_SA_SECRET_NAME = os.getenv("GCP_SA_SECRET_NAME")
+AWS_REGION = os.getenv("AWS_REGION")
+
+_token_cache = {}  # {audience: (token, exp_epoch)}
+
+
+def _load_gcp_sa_from_secrets_manager() -> dict:
+    client = boto3.client("secretsmanager", region_name=AWS_REGION)
+    resp = client.get_secret_value(SecretId=GCP_SA_SECRET_NAME)
+
+    if "SecretString" in resp:
+        return json.loads(resp["SecretString"])
+    return json.loads(resp["SecretBinary"].decode("utf-8"))
+
+
+def _get_cloud_run_id_token(audience: str) -> str:
+    sa_info = _load_gcp_sa_from_secrets_manager()
+    creds = service_account.IDTokenCredentials.from_service_account_info(
+        sa_info,
+        target_audience=audience,
+    )
+    creds.refresh(GoogleAuthRequest())
+    return creds.token
+
+
+def get_finbert_id_token() -> str:
+    token = _get_cloud_run_id_token(BACKEND2_URL)
+    return token
+
+
+
+
+
+
+
+
 
 
 def analyze_sentiment_regression_via_backend2(
@@ -35,10 +79,15 @@ def analyze_sentiment_regression_via_backend2(
         "sentences": sentences,
         "language": language,
     }
+    if PRODUCTION: 
+        token = get_finbert_id_token()
+
+
 
     response = requests.post(
         f"{BACKEND2_URL}/predict",
-        json=payload,
+        json=payload,        
+        headers={"Authorization": f"Bearer {token}"},
         timeout=timeout_s,
     )
 
