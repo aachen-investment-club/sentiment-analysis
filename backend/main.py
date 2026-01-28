@@ -1,9 +1,11 @@
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
+from authlib.integrations.base_client.errors import OAuthError
+
 import os
 import urllib
 load_dotenv()
@@ -33,7 +35,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET", "dev-secret-change-me"),  # for testing only
     same_site="lax",
-    https_only=False,  # set True if you test over https
+    https_only=True,  # set True if you test over https
 )
 
 
@@ -44,6 +46,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+auth_router = APIRouter(prefix="/api", tags=["auth"])
 
 # Include routers
 app.include_router(articles.router)
@@ -74,15 +77,18 @@ oauth.register(**oauth_config)
 
 
 
-@app.get("/login")
+@auth_router.get("/login")
 async def login(request: Request):
     
     redirect_uri = str(request.url_for("authorize"))
+    print("auth url:")
+    print(redirect_uri)
+    print(client_secret)
     return await oauth.oidc.authorize_redirect(request, redirect_uri)
 
 
 
-@app.get("/authorize")
+@auth_router.get("/authorize")
 async def authorize(request: Request):
     try:
         token = await oauth.oidc.authorize_access_token(request)
@@ -91,14 +97,26 @@ async def authorize(request: Request):
         
         # Redirect to frontend after successful authentication
         frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+
+        print("frontend_origin")
+        print(frontend_url)
         return RedirectResponse(url=frontend_url, status_code=302)
+    except OAuthError as e:
+        # THIS is what you need to see in logs
+        print("OAUTH ERROR:", e.error, e.description)
+
+        frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+        return RedirectResponse(
+            url=f"{frontend_url}?auth_error=true&error={e.error}",
+            status_code=302
+        )
     except Exception as e:        
         # Redirect to frontend with error
         frontend_url = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
         return RedirectResponse(url=f"{frontend_url}?auth_error=true&reason={type(e).__name__}", status_code=302)
 
 
-@app.get("/logout")
+@auth_router.get("/logout")
 async def logout(request: Request):
     # Clear the app session so our backend no longer considers the user logged in.
     request.session.pop("user", None)
@@ -108,6 +126,8 @@ async def logout(request: Request):
     # Cognito app client's "Allowed sign-out URLs" or Cognito will not redirect back.
     frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
     logout_uri = frontend_origin.rstrip("/") + "/"
+    print("frontend_origin")
+    print(logout_uri)
     params = {
         "client_id": COGNITO_CLIENT_ID,
         "logout_uri": logout_uri,
@@ -122,12 +142,13 @@ async def logout(request: Request):
     return RedirectResponse(url=logout_uri, status_code=302)
 
 
-@app.get("/user")
+@auth_router.get("/user")
 async def get_user(current_user: dict = Depends(get_current_user)):
     """Return the current session user or 401 if not authenticated."""
     return current_user
 
 
+app.include_router(auth_router)
 
 
 @app.get("/")
