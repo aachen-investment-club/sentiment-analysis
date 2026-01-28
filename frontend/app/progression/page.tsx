@@ -11,7 +11,7 @@ import Footer from '../components/Footer';
 import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
 
-const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const backendBase = API_BASE_URL;
 const loginUrl = `${backendBase}/login`;
 
 interface Article {
@@ -114,7 +114,7 @@ export default function ProgressionPage() {
     try {
       console.log(selectedArticles);
 
-      const response = await fetch(`${API_BASE_URL}/api/sentiment/start_analysis`, {
+      const response = await fetch(`${API_BASE_URL}/sentiment/start_analysis`, {
         method: "POST", 
         headers: {
         "Content-Type": "application/json",
@@ -343,7 +343,7 @@ export default function ProgressionPage() {
         ...(item.vixValues && { vixValues: item.vixValues }),
       }));
 
-      const response = await fetch(`${API_BASE_URL}/api/sentiment/export_pdf`, {
+      const response = await fetch(`${API_BASE_URL}/sentiment/export_pdf`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -397,7 +397,7 @@ export default function ProgressionPage() {
       const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
       const startDate = earliestDate.toISOString().slice(0, 10);
 
-      const response = await fetch(`${API_BASE_URL}/api/sentiment/vix?start_date=${startDate}`);
+      const response = await fetch(`${API_BASE_URL}/sentiment/vix?start_date=${startDate}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch VIX data: ${response.statusText}`);
