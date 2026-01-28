@@ -104,7 +104,7 @@ def is_article_german(article_title: Optional[str] = None, article_text: Optiona
 
 
 if __name__ == "__main__":
-    # Test the language detection
+    # Test the language detection (runs silently)
     test_cases = [
         ("Bitcoin price surges to new all-time high", "en"),
         ("Bitcoin-Preis steigt auf neues Allzeithoch", "de"),
@@ -112,12 +112,6 @@ if __name__ == "__main__":
         ("The market shows positive signals", "en"),
         ("", "en"),  # Empty string
     ]
-    
-    print("Testing language detection:")
-    print("=" * 60)
     for text, expected in test_cases:
         detected = detect_language(text)
-        status = "✓" if detected == expected else "✗"
-        print(f"{status} Text: '{text[:50]}...'")
-        print(f"  Expected: {expected}, Detected: {detected}")
-        print()
+        assert detected == expected, f"Text: {text[:50]!r}, expected {expected}, got {detected}"
