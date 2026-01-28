@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useSidebar } from '../components/SidebarContext';
-import ArticleUploader from '../components/ArticleUploader';
 import ArticleSelector from '../components/ArticleSelector';
 import CollapsibleSection from '../components/CollapsibleSection';
 import SentimentProgression from '../components/SentimentProgression';
 import SentimentAndVIX from '../components/SentimentAndVIX';
 import Footer from '../components/Footer';
+import AuthButton from '../components/AuthButton';
 import { API_BASE_URL } from '../lib/api';
+
+const backendBase = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+const loginUrl = `${backendBase}/login`;
 
 interface Article {
   title: string;
@@ -38,9 +41,6 @@ export default function ProgressionPage() {
   const { isCollapsed } = useSidebar();
   const sidebarWidth = isCollapsed ? 'lg:ml-20' : 'lg:ml-64';
 
-  // Upload step state
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-
   // Selection step state
   const [selectedArticles, setSelectedArticles] = useState<Article[]>([]);
   const [filters, setFilters] = useState<Filters>({});
@@ -60,6 +60,7 @@ export default function ProgressionPage() {
   const [sentimentInterpretation, setSentimentInterpretation] = useState('');
   const [vixInterpretation, setVixInterpretation] = useState('');
   const [loadingPDF, setLoadingPDF] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [includedPlots, setIncludedPlots] = useState<Set<string>>(new Set());
 
   // Cleanup includedPlots when plots are removed from exportData
@@ -77,13 +78,6 @@ export default function ProgressionPage() {
       return changed ? newSet : prev;
     });
   }, [exportData]);
-
-  const handleUploadSuccess = () => {
-    setUploadSuccess(true);
-    setTimeout(() => {
-      setUploadSuccess(false);
-    }, 3000);
-  };
 
   const handleSelectionCommit = (articles: Article[], selectedFilters: Filters) => {
     setSelectedArticles(articles);
@@ -329,6 +323,7 @@ export default function ProgressionPage() {
       return;
     }
 
+    setExportError(null);
     setLoadingPDF(true);
     try {
       // Convert dates to strings for JSON serialization
@@ -350,6 +345,7 @@ export default function ProgressionPage() {
 
       const response = await fetch(`${API_BASE_URL}/api/sentiment/export_pdf`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -357,10 +353,15 @@ export default function ProgressionPage() {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setExportError('Please log in to export PDF.');
+          return;
+        }
         const errorText = await response.text();
         throw new Error(`Failed to generate PDF: ${response.statusText}. ${errorText}`);
       }
 
+      setExportError(null);
       // Get PDF blob
       const blob = await response.blob();
       
@@ -430,13 +431,20 @@ export default function ProgressionPage() {
       {/* Header Section */}
       <header className={`bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm transition-all duration-300 ${sidebarWidth}`}>
         <div className="w-full px-4 sm:px-6 py-8 sm:py-12">
-          <div className="mx-auto text-center max-w-full lg:max-w-4xl xl:max-w-5xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-black">
-              Sentiment over time mode
-            </h1>
-            <p className="text-base sm:text-lg text-gray-600">
-              Track how the sentiment of an asset evolves over time. Compare sentiment trends with market volatility (VIX).
-            </p>
+          {/* Auth Button - Full width row, button at right edge */}
+          <div className="w-full flex justify-end mb-4 pr-0">
+            <AuthButton />
+          </div>
+          <div className="mx-auto max-w-full lg:max-w-4xl xl:max-w-5xl">
+            {/* Title and Description - Centered */}
+            <div className="text-center">
+              <h1 className="text-4xl sm:text-5xl font-bold text-black">
+                Sentiment over time mode
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600">
+                Track how the sentiment of an asset evolves over time. Compare sentiment trends with market volatility (VIX).
+              </p>
+            </div>
           </div>
         </div>
       </header>
@@ -445,20 +453,6 @@ export default function ProgressionPage() {
       <main className={`w-full px-4 sm:px-6 py-8 sm:py-16 transition-all duration-300 ${sidebarWidth}`}>
         <div className="mx-auto space-y-8 sm:space-y-12 max-w-full lg:max-w-4xl xl:max-w-5xl">
           
-          {/* Upload Step */}
-          <CollapsibleSection
-            title="Upload Documents"
-            summary={uploadSuccess ? "Article saved successfully!" : "Click to upload a new document"}
-          >
-            {uploadSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
-                Article saved successfully!
-              </div>
-            )}
-
-            <ArticleUploader onUploadSuccess={handleUploadSuccess} />
-          </CollapsibleSection>
-
           {/* Selection Step */}
           <CollapsibleSection
             title="Select Articles for Analysis"
@@ -669,7 +663,18 @@ export default function ProgressionPage() {
             <p className="text-gray-600 mb-4">
               Download your analysis results as a PDF report. Select which plots to include.
             </p>
-            
+            {exportError && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-900 mb-1">Log in required</h4>
+                <p className="text-gray-700 mb-3">{exportError}</p>
+                <a
+                  href={loginUrl}
+                  className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Log in
+                </a>
+              </div>
+            )}
             {exportData.length > 0 && (
               <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Select Plots to Include:</h4>
