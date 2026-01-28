@@ -237,6 +237,49 @@ export default function Sidebar() {
               {!isCollapsed && <span>Analyze Mode</span>}
             </Link>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-300 my-4"></div>
+
+          {/* Upload Section */}
+          <div className="mb-4">
+            {!isCollapsed && (
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
+                Actions
+              </h3>
+            )}
+
+            {/* Upload Article Link */}
+            <Link
+              href="/upload"
+              onClick={() => setIsOpen(false)}
+              className={`
+                block w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3
+                ${
+                  isActive('/upload')
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }
+                ${isCollapsed ? 'justify-center' : ''}
+              `}
+              title={isCollapsed ? 'Upload Article' : ''}
+            >
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              {!isCollapsed && <span>Upload Article</span>}
+            </Link>
+          </div>
         </div>
       </aside>
     </>

@@ -13,3 +13,8 @@ __pycache__/
 /backend_finbert/regression_finance_finetune_english_bert_distil
 /backend_finbert/.git
 /keys
+
+# Model directories (downloaded from HuggingFace)
+/backend_finbert/de_base/
+/backend_finbert/de_reg/
+/backend_finbert/en_model/

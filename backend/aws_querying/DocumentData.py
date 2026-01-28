@@ -104,8 +104,11 @@ def add_article_text(
         Body=text
     )
 
-
-    return response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
+    # Return success status and document ID
+    success = response_dynamo["ResponseMetadata"]["HTTPStatusCode"] == 200 and response_s3["ResponseMetadata"]["HTTPStatusCode"] == 200
+    if success:
+        return id
+    return None
 
 
 def get_document_labels(): 
@@ -170,9 +173,10 @@ def add_article_pdf(
     
     response_dynamo = table.put_item(Item=item)
 
+    from backend.pdfoutput.pdf_creation import extract_pdf_text
     text = extract_pdf_text(file)
 
-    if add_article_text(
+    document_id = add_article_text(
         date, 
         assets, 
         commodities, 
@@ -181,7 +185,9 @@ def add_article_pdf(
         text, 
         title,
         language
-    ): 
+    )
+    
+    if document_id: 
         return True
     return False
 
@@ -199,6 +205,29 @@ def list_articles():
 
 
     return False
+
+
+def get_distinct_sources(): 
+    """Return sorted list of unique source values from the documents table."""
+    dynamodb = boto3.resource(const.DYNAMODB, region_name=const.AWS_REGION)
+    table = dynamodb.Table(const.DYNAMO_TABLE_NAME)
+    seen = set()
+    params = {
+        "ProjectionExpression": "#src",
+        "ExpressionAttributeNames": {"#src": "source"},
+    }
+    while True:
+        response = table.scan(**params)
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            return []
+        for item in response.get("Items", []):
+            src = item.get("source")
+            if src and isinstance(src, str) and src.strip():
+                seen.add(src.strip())
+        if not response.get("LastEvaluatedKey"):
+            break
+        params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+    return sorted(seen)
 
 def get_articles_s3(articles: List[str]): 
     client= boto3.client(const.S3)
