@@ -31,7 +31,6 @@ PRODUCTION= False if "localhost" in BACKEND2_URL else True
 GCP_SA_SECRET_NAME = os.getenv("GCP_SA_SECRET_NAME")
 AWS_REGION = os.getenv("AWS_REGION")
 
-_token_cache = {}  # {audience: (token, exp_epoch)}
 
 
 def _load_gcp_sa_from_secrets_manager() -> dict:

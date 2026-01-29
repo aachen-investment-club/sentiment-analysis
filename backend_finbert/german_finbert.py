@@ -42,19 +42,11 @@ def _ensure_hf_repo_local(
     revision: Optional[str] = None,
     token: Optional[str] = None,
     force_download: bool = False,
-    # If none of these exist, we consider the folder "not ready" and download.
     key_files: Optional[list[str]] = None,
 ) -> str:
-    """
-    Download a Hugging Face repo snapshot into `local_dir` (flat).
-    Returns the local directory path.
-
-    Uses `local_dir_use_symlinks=False` so files are physically placed in the folder.
-    """
     local_path = Path(local_dir)
     local_path.mkdir(parents=True, exist_ok=True)
 
-    # If repo_id not provided, do nothing (assume assets already present locally).
     if not repo_id:
         return str(local_path)
 
@@ -79,32 +71,14 @@ def _ensure_hf_repo_local(
 
 
 def ensure_de_hf_assets_local(force_download: bool = False) -> tuple[str, str]:
-    """
-    Ensures BOTH German folders exist locally:
-      - base model folder (DE_BASE_MODEL_PATH)
-      - regression+tokenizer folder (DE_REG_LOCAL_DIR / DE_CKPT_PATH + tokenizer files)
-
-    Env vars:
-      - DE_BASE_HF_REPO_ID      e.g. "your-org/distilbert-german-finance-mlm"
-      - DE_REG_HF_REPO_ID       e.g. "your-org/Finance-Finetune-distil-GBert-Finetune-Regression"
-      - DE_HF_REVISION          optional (tag/commit) used for both; or set DE_BASE_HF_REVISION / DE_REG_HF_REVISION
-      - HF_TOKEN                optional (private repos)
-      - DE_BASE_MODEL_PATH      local folder path for base model
-      - DE_REG_LOCAL_DIR        local folder path for regression folder
-    """
     token = os.getenv("HF_TOKEN", "").strip() or None
 
-    #base_local_dir = os.getenv("DE_BASE_MODEL_PATH", "./backend_finbert/distilbert-german-finance-mlm")
-    #reg_local_dir = os.getenv("DE_REG_LOCAL_DIR", "./backend_finbert/regression_finance_finetune_gbert_distil")
     base_local_dir = os.getenv("DE_BASE_MODEL_PATH", "/tmp/de_base")
     reg_local_dir = os.getenv("DE_REG_LOCAL_DIR", "/tmp/de_reg")
 
-    #base_repo = os.getenv("DE_BASE_HF_REPO_ID", "BenjaminOyarzun17/distilbert-german-finance-mlm").strip() or None
-    #reg_repo = os.getenv("DE_REG_HF_REPO_ID", "BenjaminOyarzun17/Finance-Finetune-distil-GBert-Finetune-Regression").strip() or None
     base_repo = os.getenv("DE_BASE_HF_REPO_ID", "").strip() or None
     reg_repo = os.getenv("DE_REG_HF_REPO_ID", "").strip() or None
 
-    # Optional revisions (global or per-repo)
     rev_global = os.getenv("DE_HF_REVISION", "main").strip() or None
     base_rev = os.getenv("DE_BASE_HF_REVISION", "").strip() or rev_global
     reg_rev = os.getenv("DE_REG_HF_REVISION", "").strip() or rev_global
@@ -113,17 +87,15 @@ def ensure_de_hf_assets_local(force_download: bool = False) -> tuple[str, str]:
 
 
 
-    # Download base model repo into base_local_dir
     _ensure_hf_repo_local(
         repo_id=base_repo,
         local_dir=base_local_dir,
         revision=base_rev,
         token=token,
         force_download=force_download,
-        key_files=["config.json"],  # base must have config.json at minimum
+        key_files=["config.json"],  
     )
 
-    # Download regression repo into reg_local_dir (needs weights + tokenizer files)
     _ensure_hf_repo_local(
         repo_id=reg_repo,
         local_dir=reg_local_dir,
@@ -131,8 +103,8 @@ def ensure_de_hf_assets_local(force_download: bool = False) -> tuple[str, str]:
         token=token,
         force_download=force_download,
         key_files=[
-            "pytorch_model.bin",       # your current ckpt filename
-            "tokenizer.json",          # or vocab.txt etc.
+            "pytorch_model.bin",       
+            "tokenizer.json",          
             "config.json",
         ],
     )
@@ -171,15 +143,12 @@ def load_checkpoint_into_model(model: GermanRegressionFinBERTDistil, ckpt_path: 
 
 
 def load_de_from_env():
-    # Make sure both repos are present locally (downloads only if key files missing)
     base_local_dir, reg_local_dir = ensure_de_hf_assets_local(force_download=False)
 
 
     base_model_path = os.getenv("DE_BASE_MODEL_PATH", base_local_dir)
     ckpt_path = os.getenv("DE_CKPT_PATH", os.path.join(reg_local_dir, "pytorch_model.bin"))
 
-    # Prefer loading tokenizer from the same local regression folder
-    #tokenizer_id = os.getenv("DE_TOKENIZER_ID", reg_local_dir)
     tokenizer_id = os.getenv("DE_TOKENIZER_ID", base_local_dir)
 
     torch_num_threads = int(os.getenv("TORCH_NUM_THREADS", "1"))
