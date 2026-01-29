@@ -163,7 +163,7 @@ async def upload_article(article: Article, current_user: dict = Depends(get_curr
         }
 
 @router.post("/analyze", response_model=Dict[str, Any])
-async def analyze_text(request: AnalyzeTextRequest):
+async def analyze_text(request: AnalyzeTextRequest, current_user: dict = Depends(get_current_user)):
     """
     Analyze sentiment of text input.
     
