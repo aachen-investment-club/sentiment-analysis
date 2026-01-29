@@ -79,15 +79,12 @@ def analyze_sentiment_regression_via_backend2(
         "sentences": sentences,
         "language": language,
     }
-    if PRODUCTION: 
-        token = get_finbert_id_token()
-
-
-
+    token = get_finbert_id_token() if PRODUCTION else ""
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     response = requests.post(
         f"{BACKEND2_URL}/predict",
-        json=payload,        
-        headers={"Authorization": f"Bearer {token}"},
+        json=payload,
+        headers=headers,
         timeout=timeout_s,
     )
 
