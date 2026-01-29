@@ -18,8 +18,8 @@ class GermanRegressionFinBERTDistil(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        pooled = outputs.last_hidden_state[:, 0]      # CLS for DistilBERT
-        return self.out(self.drop(pooled))            # (batch, 1)
+        pooled = outputs.last_hidden_state[:, 0]      
+        return self.out(self.drop(pooled))            
 
 
 def inference():
@@ -38,13 +38,11 @@ def inference():
         elif k.startswith("out."):
             head_sd[k.replace("out.", "", 1)] = v
 
-    # Use the SAME base you trained with (recommended)
     base_model_path = "../distilbert-german-finance-mlm"
     model = GermanRegressionFinBERTDistil(base_model_path=base_model_path)
 
     model.bert.load_state_dict(base_sd, strict=True)
 
-    # If you *didn't* save head weights, head_sd might be empty
     if head_sd:
         model.out.load_state_dict(head_sd, strict=True)
 
