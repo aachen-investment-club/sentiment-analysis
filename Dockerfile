@@ -20,7 +20,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy application code
 COPY backend_finbert /app/backend_finbert
 
-# Cloud Run listens on $PORT (default 8080)
 ENV PORT=8080
 EXPOSE 8080
 
