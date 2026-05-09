@@ -492,3 +492,155 @@ async def export_pdf(request: PDFExportRequest, current_user: dict = Depends(get
             status_code=500,
             detail=f"Failed to generate PDF: {str(e)}\n{traceback.format_exc()}"
         )
+
+
+@router.get("/article/{document_id}", response_model=Dict[str, Any])
+async def get_article_sentiment(document_id: str):
+    """
+    Return cached sentiment for a single article.
+
+    Intended for server-to-server calls from external services such as a
+    portfolio management backend.  No authentication is required.
+
+    Returns 404 when no sentiment has been stored for the given document_id yet
+    (i.e. the article exists but has never been analysed).
+    """
+    sentiment = check_exists_article_sentiment_analysis(document_id)
+    if not sentiment:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No sentiment analysis found for document_id '{document_id}'",
+        )
+
+    result = transform_dynamodb_item(sentiment)
+    return {
+        "document_id": result.get("Document_ID", document_id),
+        "average_sentiment": result.get("average_sentiment"),
+        "label": result.get("label"),
+        "confidence": result.get("confidence"),
+        "language": result.get("language"),
+    }
+
+
+@router.get("/by-asset", response_model=Dict[str, Any])
+async def get_sentiment_by_asset(
+    asset: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
+    """
+    Return aggregated sentiment scores for a given asset symbol.
+
+    Only articles that already have *cached* sentiment are included — this
+    endpoint never triggers the FinBERT model so it is safe to call frequently.
+
+    Intended for server-to-server calls from a portfolio management backend.
+    No authentication is required.
+    """
+    try:
+        all_articles = list_articles()
+        if all_articles is False:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to retrieve articles from database",
+            )
+
+        asset_lower = asset.lower()
+        matched = [
+            a for a in all_articles
+            if asset_lower in [s.lower() for s in a.get("assets", [])]
+        ]
+
+        if start_date:
+            try:
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+                matched = [
+                    a for a in matched
+                    if a.get("date") and date.fromisoformat(str(a["date"])[:10]) >= start_dt
+                ]
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid start_date format — use YYYY-MM-DD",
+                )
+
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+                matched = [
+                    a for a in matched
+                    if a.get("date") and date.fromisoformat(str(a["date"])[:10]) <= end_dt
+                ]
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid end_date format — use YYYY-MM-DD",
+                )
+
+        if not matched:
+            return {
+                "asset": asset,
+                "article_count": 0,
+                "average_sentiment": None,
+                "label": None,
+                "articles": [],
+            }
+
+        articles_with_sentiment = []
+        sentiment_scores: List[float] = []
+
+        for article in matched:
+            doc_id = article.get("DocumentID") or article.get("Document_ID")
+            if not doc_id:
+                continue
+            cached = check_exists_article_sentiment_analysis(doc_id)
+            if not cached:
+                continue
+            s = transform_dynamodb_item(cached)
+            score = s.get("average_sentiment")
+            articles_with_sentiment.append(
+                {
+                    "document_id": doc_id,
+                    "date": article.get("date"),
+                    "title": article.get("title"),
+                    "average_sentiment": score,
+                    "label": s.get("label"),
+                    "confidence": s.get("confidence"),
+                    "language": s.get("language"),
+                }
+            )
+            if score is not None:
+                sentiment_scores.append(score)
+
+        articles_with_sentiment.sort(key=lambda x: x.get("date") or "")
+
+        avg_sentiment: Optional[float] = (
+            round(sum(sentiment_scores) / len(sentiment_scores), 4)
+            if sentiment_scores
+            else None
+        )
+
+        if avg_sentiment is None:
+            overall_label = None
+        elif avg_sentiment > 0.05:
+            overall_label = "POSITIVE"
+        elif avg_sentiment < -0.05:
+            overall_label = "NEGATIVE"
+        else:
+            overall_label = "NEUTRAL"
+
+        return {
+            "asset": asset,
+            "article_count": len(articles_with_sentiment),
+            "average_sentiment": avg_sentiment,
+            "label": overall_label,
+            "articles": articles_with_sentiment,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}",
+        )
