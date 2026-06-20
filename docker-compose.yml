@@ -1,10 +1,28 @@
 services:
+  finbert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: benjaminoyarzun17/sentiment-finbert:prod
+    env_file:
+      - .env
+    ports:
+      - "7575:8080"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - TORCH_NUM_THREADS=1
+    restart: unless-stopped
+
   backend:
     image: benjaminoyarzun17/sentiment-backend:prod
     env_file:
       - .env
     ports:
       - "8000:8000"
+    environment:
+      - FINBERT_URL=http://finbert:8080
+    depends_on:
+      - finbert
     restart: unless-stopped
 
   frontend:
