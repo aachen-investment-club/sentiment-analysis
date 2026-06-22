@@ -10,6 +10,8 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
     git \
  && rm -rf /var/lib/apt/lists/*
 
@@ -17,8 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend_finbert/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy application code
+# Copy application code and config
 COPY backend_finbert /app/backend_finbert
+COPY backend_finbert/.env /app/backend_finbert/.env
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

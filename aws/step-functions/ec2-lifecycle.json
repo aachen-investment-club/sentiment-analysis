@@ -1,0 +1,27 @@
+{
+  "Comment": "Start EC2 instance, wait 3 hours, then stop it",
+  "StartAt": "StartEC2",
+  "States": {
+    "StartEC2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ec2:startInstances",
+      "Parameters": {
+        "InstanceIds": ["i-your-instance-id"]
+      },
+      "Next": "Wait3Hours"
+    },
+    "Wait3Hours": {
+      "Type": "Wait",
+      "Seconds": 10800,
+      "Next": "StopEC2"
+    },
+    "StopEC2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ec2:stopInstances",
+      "Parameters": {
+        "InstanceIds": ["i-your-instance-id"]
+      },
+      "End": true
+    }
+  }
+}
