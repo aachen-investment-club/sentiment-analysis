@@ -27,7 +27,7 @@ load_dotenv()
 
 
 BACKEND2_URL = os.environ.get("FINBERT_URL")
-PRODUCTION= False if "localhost" in BACKEND2_URL else True
+PRODUCTION= False if "localhost" in (BACKEND2_URL or "") else True
 GCP_SA_SECRET_NAME = os.getenv("GCP_SA_SECRET_NAME")
 AWS_REGION = os.getenv("AWS_REGION")
 

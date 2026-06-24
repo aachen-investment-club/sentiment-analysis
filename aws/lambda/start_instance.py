@@ -1,19 +1,25 @@
 import boto3
 import json
+import os
 
 ec2 = boto3.client('ec2', region_name='eu-central-1')
 
 def lambda_handler(event, context):
     """
     Lambda 1: Start EC2 instance and return the application URL.
-    
+
     This function:
     1. Starts the EC2 instance
     2. Waits for it to be in 'running' state
     3. Returns the public URL for the frontend
+
+    Required environment variables:
+        INSTANCE_ID: The EC2 instance ID to start (e.g. i-0abc123def456)
+
+    Note: Set Lambda timeout to at least 3 minutes — the instance_running
+    waiter can block for 60-90s and will cause a timeout with the default 3s limit.
     """
-    # Get instance ID from environment or use default
-    instance_id = 'i-your-instance-id'  # Replace with your actual instance ID
+    instance_id = os.environ['INSTANCE_ID']
     
     try:
         # Start the instance

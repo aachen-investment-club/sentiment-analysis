@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "lambda:UpdateFunctionCode"
+      ],
+      "Resource": [
+        "arn:aws:lambda:eu-central-1:058264123925:function:start-ec2-instance",
+        "arn:aws:lambda:eu-central-1:058264123925:function:stop-ec2-instance"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:eu-central-1:058264123925:log-group:/aws/codebuild/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:GetBucketVersioning"
+      ],
+      "Resource": "arn:aws:s3:::codepipeline-eu-central-1-*"
+    }
+  ]
+}

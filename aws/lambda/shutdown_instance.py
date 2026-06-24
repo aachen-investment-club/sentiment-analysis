@@ -1,17 +1,19 @@
 import boto3
 import json
+import os
 
 ec2 = boto3.client('ec2', region_name='eu-central-1')
 
 def lambda_handler(event, context):
     """
     Lambda 2: Stop EC2 instance after 3 hours.
-    
-    This function is triggered by CloudWatch Events or Step Functions
-    to shut down the EC2 instance.
+
+    This function is triggered by Step Functions to shut down the EC2 instance.
+
+    Required environment variables:
+        INSTANCE_ID: The EC2 instance ID to stop (e.g. i-0abc123def456)
     """
-    # Get instance ID from environment or use default
-    instance_id = 'i-your-instance-id'  # Replace with your actual instance ID
+    instance_id = os.environ['INSTANCE_ID']
     
     try:
         # Stop the instance

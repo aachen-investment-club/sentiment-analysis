@@ -18,3 +18,5 @@ __pycache__/
 /backend_finbert/de_base/
 /backend_finbert/de_reg/
 /backend_finbert/en_model/
+
+/iam/step-functions-policy.json

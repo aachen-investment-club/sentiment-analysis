@@ -2,19 +2,19 @@ services:
   finbert:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: benjaminoyarzun17/sentiment-finbert:prod
+      dockerfile: Dockerfile #handles building finbert image; negates need for Dockerfile in backend_finbert folder
+    image: 058264123925.dkr.ecr.eu-central-1.amazonaws.com/sentiment-analysis/server:finbert-prod #benjaminoyarzun17/sentiment-finbert:prod
     env_file:
       - .env
     ports:
       - "7575:8080"
     environment:
       - HF_TOKEN=${HF_TOKEN}
-      - TORCH_NUM_THREADS=1
+      - TORCH_NUM_THREADS=${TORCH_NUM_THREADS}
     restart: unless-stopped
 
   backend:
-    image: benjaminoyarzun17/sentiment-backend:prod
+    image: 058264123925.dkr.ecr.eu-central-1.amazonaws.com/sentiment-analysis/server:backend-prod #benjaminoyarzun17/sentiment-backend:prod
     env_file:
       - .env
     ports:
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: benjaminoyarzun17/sentiment-frontend:prod
+    image: 058264123925.dkr.ecr.eu-central-1.amazonaws.com/sentiment-analysis/server:frontend-prod #benjaminoyarzun17/sentiment-frontend:prod
     ports:
       - "3000:3000"
     depends_on:

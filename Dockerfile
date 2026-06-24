@@ -1,4 +1,4 @@
-#this dockerfile is for model deployment ie for the /backend_finbert server. 
+#this dockerfile is for model deployment ie for the /backend_finbert server.
 
 
 FROM python:3.11-slim
@@ -19,9 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend_finbert/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy application code and config
+# Copy application code only — secrets are injected at runtime via docker-compose env_file
 COPY backend_finbert /app/backend_finbert
-COPY backend_finbert/.env /app/backend_finbert/.env
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
