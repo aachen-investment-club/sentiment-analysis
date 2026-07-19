@@ -11,9 +11,19 @@ import urllib
 load_dotenv()
 
 
-COGNITO_DOMAIN_PREFIX = os.getenv("COGNITO_DOMAIN_PREFIX")  
-COGNITO_REGION = os.getenv("AWS_REGION")   
+COGNITO_DOMAIN_PREFIX = os.getenv("COGNITO_DOMAIN_PREFIX")
+COGNITO_REGION = os.getenv("AWS_REGION")
 COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
+COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
+
+SESSION_SECRET = os.getenv("SESSION_SECRET")
+if not SESSION_SECRET:
+    raise RuntimeError(
+        "SESSION_SECRET environment variable must be set to a random secret "
+        "value - it signs the session cookies used for authentication and "
+        "must never be hardcoded or left at a default. Generate one with: "
+        "python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 
 
 
@@ -33,7 +43,7 @@ app = FastAPI(
 # CORS middleware configuration
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", "dev-secret-change-me"),  # for testing only
+    secret_key=SESSION_SECRET,
     same_site="lax",
     https_only=True,  # set True if you test over https
 )
@@ -61,11 +71,12 @@ client_secret = os.getenv("AWS_COGNITO_CLIENT_SECRET")
 
 
 # Register OAuth client
+_cognito_issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
 oauth_config = {
     "name": "oidc",
-    "authority": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T",
+    "authority": _cognito_issuer,
     "client_id": os.getenv("COGNITO_CLIENT_ID"),
-    "server_metadata_url": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_8uVOcPO1T/.well-known/openid-configuration",
+    "server_metadata_url": f"{_cognito_issuer}/.well-known/openid-configuration",
     "client_kwargs": {"scope": "email openid"},
 }
 
@@ -83,7 +94,6 @@ async def login(request: Request):
     redirect_uri = str(request.url_for("authorize"))
     print("auth url:")
     print(redirect_uri)
-    print(client_secret)
     return await oauth.oidc.authorize_redirect(request, redirect_uri)
 
 

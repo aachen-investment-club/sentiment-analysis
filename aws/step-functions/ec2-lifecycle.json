@@ -1,20 +1,15 @@
-"TODO : Replace <i-your-instance-id> with your actual EC2 instance ID in the Step Functions state machine definition below."
-
 {
-  "Comment": "Start EC2 instance, wait 3 hours, then stop it",
+  "Comment": "Invoke start-ec2-instance, wait 3 hours, then invoke stop-ec2-instance. Both Lambdas read INSTANCE_ID from their own environment variable, and start-ec2-instance already blocks on the EC2 'instance_running' waiter before it returns - so there is no separate boot-wait state needed here.",
   "StartAt": "StartEC2",
   "States": {
     "StartEC2": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::ec2:startinstances",
+      "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "InstanceIds": ["i-your-instance-id"]
+        "FunctionName": "arn:aws:lambda:eu-central-1:058264123925:function:start-ec2-instance",
+        "Payload.$": "$"
       },
-      "Next": "Wait3Hours"
-    },
-    "WaitForBoot": {
-      "Type": "Wait",
-      "Seconds": 60,
+      "ResultPath": "$.startResult",
       "Next": "Wait3Hours"
     },
     "Wait3Hours": {
@@ -24,9 +19,10 @@
     },
     "StopEC2": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::ec2:stopinstances",
+      "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "InstanceIds": ["i-your-instance-id"]
+        "FunctionName": "arn:aws:lambda:eu-central-1:058264123925:function:stop-ec2-instance",
+        "Payload.$": "$"
       },
       "End": true
     }

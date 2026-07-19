@@ -13,77 +13,92 @@ import requests
 from dotenv import load_dotenv
 import os
 import json
-import time
 import boto3
-import requests
-
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request as GoogleAuthRequest
+from botocore.config import Config as BotoConfig
 
 load_dotenv()
 
-
-
-
-
+# Local/dev only: docker-compose talks straight to a FinBERT container over HTTP.
 BACKEND2_URL = os.environ.get("FINBERT_URL")
-PRODUCTION= False if "localhost" in (BACKEND2_URL or "") else True
-GCP_SA_SECRET_NAME = os.getenv("GCP_SA_SECRET_NAME")
-AWS_REGION = os.getenv("AWS_REGION")
+
+# Prod: the backend never talks to FinBERT directly. It invokes the
+# invoke-finbert Lambda via IAM (boto3), and that Lambda is the only thing
+# allowed to reach the FinBERT EC2 instance. See aws/lambda/invoke_finbert.py
+# and AWS_DEPLOYMENT.md section 5 for the access-control setup.
+FINBERT_LAMBDA_NAME = os.environ.get("FINBERT_LAMBDA_NAME")
+AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
+
+_lambda_client = None
 
 
+def _get_lambda_client():
+    global _lambda_client
+    if _lambda_client is None:
+        # FinBERT's EC2 instance can take 60-90s to boot from a cold start
+        # (see aws/lambda/invoke_finbert.py), on top of inference time, so the
+        # default ~60s botocore read timeout is too short. Retries are disabled
+        # since a "slow but still running" invoke shouldn't be resent.
+        _lambda_client = boto3.client(
+            "lambda",
+            region_name=AWS_REGION,
+            config=BotoConfig(read_timeout=350, connect_timeout=10, retries={"max_attempts": 0}),
+        )
+    return _lambda_client
 
-def _load_gcp_sa_from_secrets_manager() -> dict:
-    client = boto3.client("secretsmanager", region_name=AWS_REGION)
-    resp = client.get_secret_value(SecretId=GCP_SA_SECRET_NAME)
 
-    if "SecretString" in resp:
-        return json.loads(resp["SecretString"])
-    return json.loads(resp["SecretBinary"].decode("utf-8"))
+def _invoke_finbert_lambda(sentences: list[str], language: str) -> list[dict]:
+    """Invoke the invoke-finbert Lambda directly (no HTTP, no public endpoint).
 
-
-def _get_cloud_run_id_token(audience: str) -> str:
-    sa_info = _load_gcp_sa_from_secrets_manager()
-    creds = service_account.IDTokenCredentials.from_service_account_info(
-        sa_info,
-        target_audience=audience,
+    Auth here is IAM, not a bearer token: this call is only permitted because
+    the backend's role is explicitly allowed to invoke this one Lambda
+    (backend-invoke-finbert-policy.json) and the Lambda's own resource policy
+    only accepts that role as a caller.
+    """
+    client = _get_lambda_client()
+    response = client.invoke(
+        FunctionName=FINBERT_LAMBDA_NAME,
+        InvocationType="RequestResponse",
+        Payload=json.dumps({"sentences": sentences, "language": language}).encode("utf-8"),
     )
-    creds.refresh(GoogleAuthRequest())
-    return creds.token
 
+    if response.get("FunctionError"):
+        raise RuntimeError(
+            f"invoke-finbert Lambda failed: {response['Payload'].read().decode('utf-8')}"
+        )
 
-def get_finbert_id_token() -> str:
-    token = _get_cloud_run_id_token(BACKEND2_URL)
-    return token
+    result = json.loads(response["Payload"].read())
 
+    if not result.get("ok"):
+        raise RuntimeError(f"invoke-finbert Lambda returned an error: {result.get('error')}")
 
-
-
-
-
-
-
+    # Coerce types defensively
+    return [
+        {
+            "score": float(item["score"]),
+            "sentence": str(item["sentence"]),
+        }
+        for item in result["results"]
+    ]
 
 
 def analyze_sentiment_regression_via_backend2(
     sentences: list[str],
-    german: bool = False, 
+    german: bool = False,
     timeout_s: float = 300.0
 ) -> list[dict]:
-    if german: 
-        language = "de"
-    else: 
-        language = "en"
+    language = "de" if german else "en"
+
+    if FINBERT_LAMBDA_NAME:
+        return _invoke_finbert_lambda(sentences, language)
+
+    # Local/dev fallback: no Lambda configured, talk to FinBERT directly.
     payload = {
         "sentences": sentences,
         "language": language,
     }
-    token = get_finbert_id_token() if PRODUCTION else ""
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
     response = requests.post(
         f"{BACKEND2_URL}/predict",
         json=payload,
-        headers=headers,
         timeout=timeout_s,
     )
 

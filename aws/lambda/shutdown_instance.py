@@ -2,6 +2,9 @@ import boto3
 import json
 import os
 
+
+instance_id = os.environ.get('INSTANCE_ID')
+
 ec2 = boto3.client('ec2', region_name='eu-central-1')
 
 def lambda_handler(event, context):
@@ -13,7 +16,6 @@ def lambda_handler(event, context):
     Required environment variables:
         INSTANCE_ID: The EC2 instance ID to stop (e.g. i-0abc123def456)
     """
-    instance_id = os.environ['INSTANCE_ID']
     
     try:
         # Stop the instance
