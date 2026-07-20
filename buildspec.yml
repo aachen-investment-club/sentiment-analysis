@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+
+  build:
+    commands:
+      # Package and deploy start_instance Lambda
+      - echo "Packaging start-ec2-instance..."
+      - cd aws/lambda
+      - zip start_instance.zip start_instance.py
+      - aws lambda update-function-code
+          --function-name start-ec2-instance
+          --zip-file fileb://start_instance.zip
+          --region eu-central-1
+
+      # Package and deploy shutdown_instance Lambda
+      - echo "Packaging stop-ec2-instance..."
+      - zip shutdown_instance.zip shutdown_instance.py
+      - aws lambda update-function-code
+          --function-name stop-ec2-instance
+          --zip-file fileb://shutdown_instance.zip
+          --region eu-central-1
+
+      - echo "Both Lambda functions deployed successfully."

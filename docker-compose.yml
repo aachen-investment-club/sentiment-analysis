@@ -1,16 +1,33 @@
 services:
   backend:
-    image: benjaminoyarzun17/sentiment-backend:prod
+    image: 058264123925.dkr.ecr.eu-central-1.amazonaws.com/sentiment-analysis-backend:latest
+    platform: linux/amd64
+    build:
+      context: ./backend
     env_file:
       - .env
     ports:
       - "8000:8000"
+    environment:
+      - FINBERT_URL=http://finbert:8080
     restart: unless-stopped
 
   frontend:
-    image: benjaminoyarzun17/sentiment-frontend:prod
+    image: 058264123925.dkr.ecr.eu-central-1.amazonaws.com/sentiment-analysis-frontend:latest
+    platform: linux/amd64
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     ports:
       - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
+
+  #for local testing only
+#  finbert-mock:
+#    image: python:3.11-slim
+#    command: python -m http.server 8080 --bind 0.0.0.0
+#    ports:
+#      - "8080:8080"

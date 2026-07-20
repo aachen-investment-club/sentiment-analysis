@@ -1,0 +1,30 @@
+{
+  "Comment": "Invoke start-ec2-instance, wait 3 hours, then invoke stop-ec2-instance. Both Lambdas read INSTANCE_ID from their own environment variable, and start-ec2-instance already blocks on the EC2 'instance_running' waiter before it returns - so there is no separate boot-wait state needed here.",
+  "StartAt": "StartEC2",
+  "States": {
+    "StartEC2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:eu-central-1:058264123925:function:start-ec2-instance",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.startResult",
+      "Next": "Wait3Hours"
+    },
+    "Wait3Hours": {
+      "Type": "Wait",
+      "Seconds": 10800,
+      "Next": "StopEC2"
+    },
+    "StopEC2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:eu-central-1:058264123925:function:stop-ec2-instance",
+        "Payload.$": "$"
+      },
+      "End": true
+    }
+  }
+}

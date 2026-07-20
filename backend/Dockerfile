@@ -15,16 +15,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libcairo2 \
     libgtk-3-0 \
+    gcc \
+    g++ \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN python -c "import kaleido; kaleido.get_chrome_sync()"
 
-COPY backend/ /app/backend/
+COPY . /app/backend/
 
 WORKDIR /app/backend
 

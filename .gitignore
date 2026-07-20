@@ -5,6 +5,7 @@ __pycache__/
 .env
 .env.local
 /frontend/.env.local
+AWSCLIV2.pkg
 
 /prototyping/mock.py
 /prototyping/wikipedia_extractor.py
@@ -18,3 +19,5 @@ __pycache__/
 /backend_finbert/de_base/
 /backend_finbert/de_reg/
 /backend_finbert/en_model/
+
+/aws/iam/step-functions-policy.json

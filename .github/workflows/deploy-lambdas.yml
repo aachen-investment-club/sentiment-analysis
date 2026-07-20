@@ -1,0 +1,40 @@
+name: Deploy Lambda Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "aws/lambda/**"
+
+jobs:
+  deploy:
+    name: Zip and deploy Lambda functions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Deploy start-ec2-instance
+        run: |
+          cd aws/lambda
+          zip start_instance.zip start_instance.py
+          aws lambda update-function-code \
+            --function-name start-ec2-instance \
+            --zip-file fileb://start_instance.zip
+
+      - name: Deploy stop-ec2-instance
+        run: |
+          cd aws/lambda
+          zip shutdown_instance.zip shutdown_instance.py
+          aws lambda update-function-code \
+            --function-name stop-ec2-instance \
+            --zip-file fileb://shutdown_instance.zip

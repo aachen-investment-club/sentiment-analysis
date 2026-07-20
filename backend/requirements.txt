@@ -43,7 +43,6 @@ frontend
 frozendict
 fsspec
 gitdb
-google-auth
 GitPython
 h11
 httpcore
